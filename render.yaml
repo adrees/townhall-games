@@ -2,7 +2,7 @@ services:
   - type: web
     name: townhall-games
     env: node
-    region: oregon
+    region: frankfurt 
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
