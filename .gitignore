@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+*.log
+*.swp
+.DS_Store
+.claude/settings.local.json
+.claude/current-task.md
+.claude/project-context.md

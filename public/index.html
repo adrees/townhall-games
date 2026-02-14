@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buzzword Bingo</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Buzzword Bingo</h1>
+
+    <!-- Join -->
+    <div id="joinSection" class="section">
+      <h2>Join Game</h2>
+      <div class="form-group">
+        <label for="screenName">Screen Name</label>
+        <input type="text" id="screenName" placeholder="Enter your name" maxlength="30">
+      </div>
+      <button id="joinBtn" onclick="joinGame()">Join</button>
+    </div>
+
+    <!-- Waiting -->
+    <div id="waitingSection" class="section hidden">
+      <div class="status-bar">Waiting for admin to start the game...</div>
+    </div>
+
+    <!-- Playing -->
+    <div id="playingSection" class="hidden">
+      <div class="round-indicator" id="roundIndicator">Round 1</div>
+      <div class="status-bar" id="statusBar">Mark your words!</div>
+      <div class="bingo-grid" id="bingoGrid"></div>
+    </div>
+
+    <!-- Win overlay -->
+    <div id="winBanner" class="win-banner hidden"></div>
+
+    <!-- Leaderboard -->
+    <div id="leaderboardSection" class="hidden">
+      <div class="leaderboard">
+        <h2>Leaderboard</h2>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Player</th><th>Points</th><th>Rounds Won</th></tr>
+          </thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var ws;
+    var playerId = null;
+    var grid = null;
+    var marked = null;
+    var gameActive = false;
+
+    function connect() {
+      var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(protocol + '//' + location.host);
+
+      ws.onmessage = function(e) {
+        var msg = JSON.parse(e.data);
+        handleMessage(msg);
+      };
+
+      ws.onclose = function() {
+        setTimeout(connect, 2000);
+      };
+    }
+
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'joined':
+          playerId = msg.playerId;
+          document.getElementById('joinSection').classList.add('hidden');
+          if (msg.gameStatus === 'active') {
+            // Late joiner: card will come via card_dealt event
+            showPlaying();
+          } else {
+            document.getElementById('waitingSection').classList.remove('hidden');
+          }
+          document.getElementById('leaderboardSection').classList.remove('hidden');
+          break;
+
+        case 'card_dealt':
+          grid = msg.grid;
+          marked = msg.marked;
+          gameActive = true;
+          document.getElementById('waitingSection').classList.add('hidden');
+          document.getElementById('winBanner').classList.add('hidden');
+          showPlaying();
+          document.getElementById('roundIndicator').textContent = 'Round ' + msg.roundNumber;
+          document.getElementById('statusBar').textContent = 'Mark your words!';
+          renderGrid();
+          break;
+
+        case 'mark_result':
+          if (msg.success) {
+            // Update local marked state
+            markWordLocally(msg.word);
+            renderGrid();
+          }
+          if (msg.bingo) {
+            document.getElementById('statusBar').textContent = 'BINGO! You won!';
+            gameActive = false;
+          }
+          if (msg.roundOver && !msg.bingo) {
+            document.getElementById('statusBar').textContent = 'Round over!';
+            gameActive = false;
+          }
+          break;
+
+        case 'player_won':
+          showWinBanner(msg.winnerName + ' won Round ' + msg.roundNumber + '!');
+          gameActive = false;
+          document.getElementById('statusBar').textContent = 'Round over - waiting for next round';
+          break;
+
+        case 'game_status':
+          if (msg.status === 'active') {
+            document.getElementById('statusBar').textContent = 'Mark your words!';
+          } else if (msg.status === 'finished') {
+            document.getElementById('statusBar').textContent = 'Round over - waiting for next round';
+          }
+          break;
+
+        case 'leaderboard':
+          updateLeaderboard(msg.entries);
+          break;
+
+        case 'player_joined':
+        case 'player_left':
+          // Could show notification; keeping it simple
+          break;
+
+        case 'error':
+          alert('Error: ' + msg.message);
+          break;
+      }
+    }
+
+    function joinGame() {
+      var name = document.getElementById('screenName').value.trim();
+      if (!name) {
+        alert('Please enter a screen name');
+        return;
+      }
+      ws.send(JSON.stringify({ type: 'join', screenName: name }));
+    }
+
+    // Allow Enter key to join
+    document.getElementById('screenName').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') joinGame();
+    });
+
+    function showPlaying() {
+      document.getElementById('playingSection').classList.remove('hidden');
+    }
+
+    function renderGrid() {
+      var container = document.getElementById('bingoGrid');
+      container.innerHTML = '';
+      for (var r = 0; r < 5; r++) {
+        for (var c = 0; c < 5; c++) {
+          var cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.textContent = grid[r][c];
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+
+          if (grid[r][c] === 'FREE') {
+            cell.classList.add('free');
+          } else if (marked[r][c]) {
+            cell.classList.add('marked');
+          }
+
+          if (grid[r][c] !== 'FREE' && !marked[r][c]) {
+            cell.addEventListener('click', handleCellClick);
+          }
+
+          container.appendChild(cell);
+        }
+      }
+    }
+
+    function handleCellClick(e) {
+      if (!gameActive) return;
+      var r = parseInt(e.target.dataset.row);
+      var c = parseInt(e.target.dataset.col);
+      var word = grid[r][c];
+      ws.send(JSON.stringify({ type: 'mark_word', word: word }));
+    }
+
+    function markWordLocally(word) {
+      var lower = word.trim().toLowerCase();
+      for (var r = 0; r < 5; r++) {
+        for (var c = 0; c < 5; c++) {
+          if (grid[r][c].toLowerCase() === lower) {
+            marked[r][c] = true;
+            return;
+          }
+        }
+      }
+    }
+
+    function showWinBanner(text) {
+      var el = document.getElementById('winBanner');
+      el.textContent = text;
+      el.classList.remove('hidden');
+    }
+
+    function updateLeaderboard(entries) {
+      var tbody = document.getElementById('leaderboardBody');
+      tbody.innerHTML = '';
+      entries.forEach(function(entry, i) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + (i + 1) + '</td><td>' + escapeHtml(entry.screenName) +
+          '</td><td>' + entry.totalPoints + '</td><td>' + entry.roundsWon + '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    connect();
+  </script>
+</body>
+</html>

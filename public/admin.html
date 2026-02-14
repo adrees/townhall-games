@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buzzword Bingo - Admin</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Buzzword Bingo - Admin</h1>
+
+    <!-- Setup -->
+    <div id="setup" class="section">
+      <h2>Create Session</h2>
+      <div class="form-group">
+        <label for="words">Word List (one per line, at least 24 unique words)</label>
+        <textarea id="words" rows="10" placeholder="synergy&#10;leverage&#10;paradigm&#10;disrupt&#10;..."></textarea>
+      </div>
+      <button id="createBtn" onclick="createSession()">Create Session</button>
+    </div>
+
+    <!-- Active session -->
+    <div id="active" class="hidden">
+      <div class="section">
+        <h2>Session</h2>
+        <p>Session ID: <strong id="sessionId"></strong></p>
+        <p class="player-count">Players: <span id="playerCount">0</span></p>
+        <div id="playerList" class="info"></div>
+      </div>
+
+      <div class="section">
+        <div class="status-bar" id="gameStatus">Waiting to start</div>
+        <div class="btn-row">
+          <button id="startBtn" onclick="startGame()">Start Game</button>
+          <button id="newRoundBtn" onclick="startNewRound()" disabled>New Round</button>
+        </div>
+      </div>
+
+      <div id="winBanner" class="win-banner hidden"></div>
+
+      <div class="leaderboard">
+        <h2>Leaderboard</h2>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Player</th><th>Points</th><th>Rounds Won</th></tr>
+          </thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws;
+    const players = new Map();
+
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(protocol + '//' + location.host);
+
+      ws.onmessage = function(e) {
+        const msg = JSON.parse(e.data);
+        handleMessage(msg);
+      };
+
+      ws.onclose = function() {
+        setTimeout(connect, 2000);
+      };
+    }
+
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'session_created':
+          document.getElementById('setup').classList.add('hidden');
+          document.getElementById('active').classList.remove('hidden');
+          document.getElementById('sessionId').textContent = msg.sessionId;
+          break;
+
+        case 'player_joined':
+          players.set(msg.playerId, msg.screenName);
+          document.getElementById('playerCount').textContent = msg.playerCount;
+          updatePlayerList();
+          break;
+
+        case 'player_left':
+          players.delete(msg.playerId);
+          document.getElementById('playerCount').textContent = msg.playerCount;
+          updatePlayerList();
+          break;
+
+        case 'game_status':
+          updateGameStatus(msg.status, msg.round);
+          break;
+
+        case 'player_won':
+          showWinBanner(msg.winnerName + ' won Round ' + msg.roundNumber + '!');
+          break;
+
+        case 'leaderboard':
+          updateLeaderboard(msg.entries);
+          break;
+
+        case 'error':
+          alert('Error: ' + msg.message);
+          break;
+      }
+    }
+
+    function createSession() {
+      const text = document.getElementById('words').value.trim();
+      const words = text.split('\n').map(function(w) { return w.trim(); }).filter(function(w) { return w.length > 0; });
+      if (words.length < 24) {
+        alert('Need at least 24 unique words');
+        return;
+      }
+      ws.send(JSON.stringify({ type: 'create_session', words: words }));
+    }
+
+    function startGame() {
+      ws.send(JSON.stringify({ type: 'start_game' }));
+    }
+
+    function startNewRound() {
+      ws.send(JSON.stringify({ type: 'start_new_round' }));
+      document.getElementById('winBanner').classList.add('hidden');
+    }
+
+    function updatePlayerList() {
+      const names = Array.from(players.values());
+      document.getElementById('playerList').textContent = names.length > 0
+        ? 'Players: ' + names.join(', ')
+        : '';
+    }
+
+    function updateGameStatus(status, round) {
+      var el = document.getElementById('gameStatus');
+      var startBtn = document.getElementById('startBtn');
+      var newRoundBtn = document.getElementById('newRoundBtn');
+
+      if (status === 'active') {
+        el.textContent = 'Round ' + round + ' - Active';
+        startBtn.disabled = true;
+        newRoundBtn.disabled = true;
+      } else if (status === 'finished') {
+        el.textContent = 'Round ' + round + ' - Finished';
+        startBtn.disabled = true;
+        newRoundBtn.disabled = false;
+      } else {
+        el.textContent = 'Waiting to start';
+        startBtn.disabled = false;
+        newRoundBtn.disabled = true;
+      }
+    }
+
+    function showWinBanner(text) {
+      var el = document.getElementById('winBanner');
+      el.textContent = text;
+      el.classList.remove('hidden');
+    }
+
+    function updateLeaderboard(entries) {
+      var tbody = document.getElementById('leaderboardBody');
+      tbody.innerHTML = '';
+      entries.forEach(function(entry, i) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + (i + 1) + '</td><td>' + escapeHtml(entry.screenName) +
+          '</td><td>' + entry.totalPoints + '</td><td>' + entry.roundsWon + '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    connect();
+  </script>
+</body>
+</html>

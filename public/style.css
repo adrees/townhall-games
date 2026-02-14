@@ -1,0 +1,252 @@
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --surface-hover: #1a2744;
+  --primary: #e94560;
+  --primary-hover: #c73a52;
+  --accent: #0f3460;
+  --text: #eee;
+  --text-muted: #999;
+  --success: #4caf50;
+  --free: #ff9800;
+  --marked: #e94560;
+  --cell-bg: #16213e;
+  --border: #333;
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: var(--primary);
+  font-size: 1.8rem;
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+}
+
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* Form elements */
+input, textarea, button {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+input[type="text"], textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.6rem 0.8rem;
+  width: 100%;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+button:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Bingo grid */
+.bingo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin: 1rem 0;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: var(--cell-bg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.3rem;
+  font-size: 0.75rem;
+  word-break: break-word;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1.2;
+}
+
+.cell:hover:not(.marked):not(.free) {
+  background: var(--surface-hover);
+  border-color: var(--primary);
+}
+
+.cell.marked {
+  background: var(--marked);
+  border-color: var(--marked);
+  color: white;
+  font-weight: 600;
+}
+
+.cell.free {
+  background: var(--free);
+  border-color: var(--free);
+  color: white;
+  font-weight: 700;
+  cursor: default;
+}
+
+/* Leaderboard */
+.leaderboard {
+  margin: 1rem 0;
+}
+
+.leaderboard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaderboard th,
+.leaderboard td {
+  padding: 0.5rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.leaderboard th {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.leaderboard tr:hover td {
+  background: var(--surface);
+}
+
+/* Status & notifications */
+.status-bar {
+  text-align: center;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.win-banner {
+  text-align: center;
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: var(--radius);
+  background: var(--success);
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 700;
+  animation: pulse 0.5s ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Sections */
+.section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+
+.player-count {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Info text */
+.info {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Button row */
+.btn-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0;
+}
+
+/* Round indicator */
+.round-indicator {
+  text-align: center;
+  font-size: 1rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .cell {
+    font-size: 0.6rem;
+    padding: 0.2rem;
+  }
+  h1 { font-size: 1.4rem; }
+}
