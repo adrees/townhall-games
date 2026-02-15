@@ -7,3 +7,5 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm run start:relay
     healthCheckPath: /
+    envVars:
+      - fromGroup: town-hall-games
