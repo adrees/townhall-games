@@ -1,8 +1,10 @@
 services:
   - type: web
     name: townhall-games
-    env: node
-    region: frankfurt 
+    runtime: node
+    repo: https://github.com/adrees/townhall-games
+    branch: main
+    region: frankfurt
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm run start:relay
