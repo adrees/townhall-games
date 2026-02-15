@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import * as http from 'http';
 import * as path from 'path';
 import { WebSocketServer } from 'ws';
