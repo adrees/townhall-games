@@ -8,19 +8,29 @@ const CONTENT_TYPES: Record<string, string> = {
   '.js': 'application/javascript; charset=utf-8',
 };
 
+export type ServerRole = 'unified' | 'admin' | 'relay';
+
 const ROUTES: Record<string, string> = {
   '/': 'index.html',
   '/admin': 'admin.html',
   '/style.css': 'style.css',
 };
 
+const ROLE_ROUTES: Record<ServerRole, Set<string>> = {
+  unified: new Set(['/', '/admin', '/style.css']),
+  admin: new Set(['/admin', '/style.css']),
+  relay: new Set(['/', '/style.css']),
+};
+
 export function handleStaticRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   publicDir: string,
+  role: ServerRole = 'unified',
 ): void {
   const url = req.url ?? '/';
-  const fileName = ROUTES[url];
+  const allowed = ROLE_ROUTES[role];
+  const fileName = allowed.has(url) ? ROUTES[url] : undefined;
 
   if (!fileName) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });

@@ -9,6 +9,7 @@
 <body>
   <div class="container">
     <h1>Buzzword Bingo - Admin</h1>
+    <div id="relayStatus" class="relay-status disconnected">Relay: disconnected</div>
 
     <!-- Setup -->
     <div id="setup" class="section">
@@ -101,6 +102,10 @@
           updateLeaderboard(msg.entries);
           break;
 
+        case 'relay_status':
+          updateRelayStatus(msg.status);
+          break;
+
         case 'error':
           alert('Error: ' + msg.message);
           break;
@@ -174,6 +179,12 @@
       var div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    function updateRelayStatus(status) {
+      var el = document.getElementById('relayStatus');
+      el.textContent = 'Relay: ' + status;
+      el.className = 'relay-status ' + status;
     }
 
     connect();

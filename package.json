@@ -8,6 +8,8 @@
     "test:coverage": "jest --coverage",
     "build": "tsc",
     "start": "node dist/server/index.js",
+    "start:admin": "node dist/server/admin-main.js",
+    "start:relay": "node dist/relay/relay-main.js",
     "demo": "npx tsc && node dist/demo.js"
   },
   "keywords": [],

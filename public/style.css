@@ -242,6 +242,31 @@ button:disabled {
   margin: 0.5rem 0;
 }
 
+/* Relay status indicator */
+.relay-status {
+  text-align: center;
+  padding: 0.3rem 0.8rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.relay-status.connected {
+  background: var(--success);
+  color: white;
+}
+
+.relay-status.disconnected {
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.relay-status.connecting {
+  background: var(--free);
+  color: white;
+}
+
 /* Responsive */
 @media (max-width: 500px) {
   .cell {

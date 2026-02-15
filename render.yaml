@@ -5,5 +5,5 @@ services:
     region: frankfurt 
     plan: free
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: npm run start:relay
     healthCheckPath: /
