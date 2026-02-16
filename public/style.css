@@ -267,6 +267,18 @@ button:disabled {
   color: white;
 }
 
+/* Winning cell animation */
+@keyframes bingo-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.cell.winning {
+  animation: bingo-pulse 0.8s ease-in-out infinite;
+  z-index: 1;
+  box-shadow: 0 0 12px rgba(233, 69, 96, 0.6);
+}
+
 /* Responsive */
 @media (max-width: 500px) {
   .cell {
