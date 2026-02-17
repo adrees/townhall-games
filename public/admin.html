@@ -18,6 +18,7 @@
         <label for="words">Word List (one per line, at least 24 unique words)</label>
         <textarea id="words" rows="10" placeholder="synergy&#10;leverage&#10;paradigm&#10;disrupt&#10;..."></textarea>
       </div>
+      <button type="button" onclick="loadExampleWords()">Example Words</button>
       <button id="createBtn" onclick="createSession()">Create Session</button>
     </div>
 
@@ -110,6 +111,18 @@
           alert('Error: ' + msg.message);
           break;
       }
+    }
+
+    var exampleWords = [
+      'synergy', 'blockchain', 'disruptive', 'scalable', 'leverage',
+      'paradigm', 'ecosystem', 'agile', 'holistic', 'bandwidth',
+      'streamline', 'innovative', 'actionable', 'pivot', 'granular',
+      'optimize', 'stakeholder', 'empower', 'ideation', 'omnichannel',
+      'deep-dive', 'alignment', 'hyperlocal', 'onboarding'
+    ];
+
+    function loadExampleWords() {
+      document.getElementById('words').value = exampleWords.join('\n');
     }
 
     function createSession() {
