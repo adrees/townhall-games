@@ -114,7 +114,6 @@
 
         case 'player_won':
           showWinBanner(msg.winnerName + ' won Round ' + msg.roundNumber + '!');
-          highlightWinningCells(msg.pattern);
           gameActive = false;
           document.getElementById('statusBar').textContent = 'Round over - waiting for next round';
           break;
@@ -204,32 +203,6 @@
           }
         }
       }
-    }
-
-    function getWinningPositions(pattern) {
-      var positions = [];
-      if (pattern.type === 'horizontal') {
-        for (var c = 0; c < 5; c++) positions.push([pattern.row, c]);
-      } else if (pattern.type === 'vertical') {
-        for (var r = 0; r < 5; r++) positions.push([r, pattern.col]);
-      } else if (pattern.type === 'diagonal') {
-        for (var i = 0; i < 5; i++) {
-          positions.push(pattern.direction === 'tl-br' ? [i, i] : [i, 4 - i]);
-        }
-      } else if (pattern.type === 'corners') {
-        positions = [[0,0],[0,4],[4,0],[4,4],[2,2]];
-      }
-      return positions;
-    }
-
-    function highlightWinningCells(pattern) {
-      if (!pattern) return;
-      var positions = getWinningPositions(pattern);
-      var container = document.getElementById('bingoGrid');
-      positions.forEach(function(pos) {
-        var cell = container.querySelector('[data-row="' + pos[0] + '"][data-col="' + pos[1] + '"]');
-        if (cell) cell.classList.add('winning');
-      });
     }
 
     function showWinBanner(text) {
