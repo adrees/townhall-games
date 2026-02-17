@@ -10,7 +10,8 @@
     "start": "node dist/server/index.js",
     "start:admin": "node dist/server/admin-main.js",
     "start:relay": "node dist/relay/relay-main.js",
-    "demo": "npx tsc && node dist/demo.js"
+    "demo": "npx tsc && node dist/demo.js",
+    "dev": "tsc && RELAY_SECRET=dev RELAY_URL=ws://localhost:10000 node dist/relay/relay-main.js & RELAY_SECRET=dev RELAY_URL=ws://localhost:10000 node dist/server/admin-main.js; kill %1"
   },
   "keywords": [],
   "author": "",
