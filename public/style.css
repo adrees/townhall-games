@@ -173,6 +173,32 @@ button:disabled {
   background: var(--surface);
 }
 
+/* Inline notification area */
+.notification-area {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1000;
+  max-width: 280px;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--text);
+  border-left: 4px solid var(--primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.notification-area.error {
+  border-left-color: var(--primary);
+  background: #2a0e1a;
+}
+
+.notification-area.info {
+  border-left-color: var(--success);
+}
+
 /* Status & notifications */
 .status-bar {
   text-align: center;

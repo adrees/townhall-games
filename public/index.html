@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <div id="notificationArea" class="notification-area hidden"></div>
   <div class="container">
     <h1>Buzzword Bingo</h1>
 
@@ -52,6 +53,18 @@
   <script>
     var ws;
     var playerId = null;
+    var notifTimer = null;
+
+    function showNotification(message, type) {
+      var el = document.getElementById('notificationArea');
+      el.textContent = message;
+      el.className = 'notification-area ' + (type || 'error');
+      if (notifTimer) clearTimeout(notifTimer);
+      notifTimer = setTimeout(function() {
+        el.classList.add('hidden');
+      }, 4000);
+    }
+
     var grid = null;
     var marked = null;
     var gameActive = false;
@@ -136,7 +149,7 @@
           break;
 
         case 'error':
-          alert('Error: ' + msg.message);
+          showNotification('Error: ' + msg.message, 'error');
           break;
       }
     }
@@ -144,7 +157,7 @@
     function joinGame() {
       var name = document.getElementById('screenName').value.trim();
       if (!name) {
-        alert('Please enter a screen name');
+        showNotification('Please enter a screen name', 'error');
         return;
       }
       ws.send(JSON.stringify({ type: 'join', screenName: name }));
