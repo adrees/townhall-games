@@ -30,25 +30,41 @@ export function handleStaticRequest(
 ): void {
   const url = req.url ?? '/';
   const allowed = ROLE_ROUTES[role];
-  const fileName = allowed.has(url) ? ROUTES[url] : undefined;
 
-  if (!fileName) {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
+  // Named routes (HTML pages, CSS) use the explicit allowlist.
+  if (allowed.has(url) && ROUTES[url]) {
+    const fileName = ROUTES[url];
+    const filePath = path.join(publicDir, fileName);
+    const ext = path.extname(fileName);
+    const contentType = CONTENT_TYPES[ext] ?? 'application/octet-stream';
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Internal Server Error');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(data);
+    });
     return;
   }
 
-  const filePath = path.join(publicDir, fileName);
-  const ext = path.extname(fileName);
-  const contentType = CONTENT_TYPES[ext] ?? 'application/octet-stream';
+  // ES module scripts: serve any .js file directly from publicDir.
+  // path.basename prevents directory traversal.
+  if (url.endsWith('.js')) {
+    const filePath = path.join(publicDir, path.basename(url));
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': CONTENT_TYPES['.js'] });
+      res.end(data);
+    });
+    return;
+  }
 
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(500, { 'Content-Type': 'text/plain' });
-      res.end('Internal Server Error');
-      return;
-    }
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(data);
-  });
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Not Found');
 }
