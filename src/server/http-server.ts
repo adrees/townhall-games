@@ -32,7 +32,8 @@ export function handleStaticRequest(
   const allowed = ROLE_ROUTES[role];
 
   // Named routes (HTML pages, CSS) use the explicit allowlist.
-  if (allowed.has(url) && ROUTES[url]) {
+  // allowed.has(url) already implies ROUTES[url] exists (both sets are subsets of ROUTES keys).
+  if (allowed.has(url)) {
     const fileName = ROUTES[url];
     const filePath = path.join(publicDir, fileName);
     const ext = path.extname(fileName);
