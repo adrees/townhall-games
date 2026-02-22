@@ -1,0 +1,26 @@
+name: E2E Smoke Test
+
+on:
+  workflow_run:
+    workflows: ["Tests"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  smoke:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      SMOKE_URL: https://townhall-games.onrender.com
+      EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+      RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+      - run: npm ci
+      - run: npm run smoke
