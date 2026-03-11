@@ -1,4 +1,4 @@
-import type { MarkResult, Winner } from './types';
+import type { MarkResult, Winner } from '../../types';
 import { BingoCard } from './bingo-card';
 
 export class BingoGame {

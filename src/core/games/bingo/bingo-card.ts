@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { WinPattern } from './types';
+import type { WinPattern } from '../../types';
 
 export class BingoCard {
   readonly id: string;
