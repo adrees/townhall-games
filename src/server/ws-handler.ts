@@ -132,7 +132,7 @@ export function createWsHandler(): WsHandler {
             send(ws, { type: 'error', message: 'Session already exists' });
             return;
           }
-          session = new Session(command.words);
+          session = new Session('bingo', command.words);
           session.addEventListener(handleSessionEvent);
           adminSocket = ws;
           send(ws, { type: 'session_created', sessionId: session.id });

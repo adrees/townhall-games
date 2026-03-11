@@ -1,17 +1,9 @@
 import { Session } from './core/session';
 import type { GameEvent } from './core/types';
-import type { BingoCard } from './core/bingo-card';
+import type { BingoCard } from './core/games/bingo/bingo-card';
+import { BINGO_WORDS } from './fixtures/bingo-words';
 
-const buzzwords = [
-  "synergy", "circle back", "low-hanging fruit", "move the needle",
-  "paradigm shift", "think outside the box", "take this offline",
-  "ping me", "deep dive", "touch base", "bandwidth", "leverage",
-  "stakeholder", "alignment", "action items", "best practices",
-  "core competency", "drill down", "end of day", "game changer",
-  "ideate", "key takeaway", "level set", "net-net", "on my radar",
-  "quick win", "reach out", "run it up the flagpole", "streamline",
-  "value-add",
-];
+const buzzwords = BINGO_WORDS;
 
 function printCard(card: BingoCard, name: string): void {
   const grid = card.getGrid();
@@ -45,7 +37,7 @@ function formatPattern(pattern: { type: string; row?: number; col?: number; dire
 console.log('\n  Buzzword Bingo - Session Demo');
 console.log('  ' + '='.repeat(40));
 
-const session = new Session(buzzwords);
+const session = new Session('bingo', buzzwords);
 console.log(`  Session ID: ${session.id}`);
 
 // Register event listener to log all events

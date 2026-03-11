@@ -1,4 +1,4 @@
-import { BingoCard } from '../bingo-card';
+import { BingoCard } from '../games/bingo/bingo-card';
 import type { WinPattern } from '../types';
 
 const sampleBuzzwords = [

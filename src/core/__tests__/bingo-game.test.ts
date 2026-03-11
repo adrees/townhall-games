@@ -1,4 +1,4 @@
-import { BingoGame } from '../bingo-game';
+import { BingoGame } from '../games/bingo/bingo-game';
 import type { MarkResult, Winner, WinPattern } from '../types';
 
 const sampleBuzzwords = [

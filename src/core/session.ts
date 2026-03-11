@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
-import { BingoGame } from './bingo-game';
-import { BingoCard } from './bingo-card';
+import { BingoGame } from './games/bingo/bingo-game';
+import { BingoCard } from './games/bingo/bingo-card';
 import type {
   Player,
   PlayerScore,
@@ -12,17 +12,19 @@ import type {
 
 export class Session {
   readonly id: string;
+  readonly gameMode: 'bingo' | 'trivia';
   private readonly wordList: string[];
   private players: Map<string, Player> = new Map();
   private game: BingoGame | null = null;
   private listeners: EventListener[] = [];
   private scores: Map<string, { totalPoints: number; roundsWon: number; lastWinRound?: number }> = new Map();
 
-  constructor(wordList: string[]) {
+  constructor(gameMode: 'bingo' | 'trivia', wordList: string[]) {
     // Validate word list by trying to construct a BingoGame (reuses its validation)
     // We create a throwaway game just to validate, then discard it
     new BingoGame('validate', wordList);
     this.id = randomUUID();
+    this.gameMode = gameMode;
     this.wordList = wordList;
   }
 

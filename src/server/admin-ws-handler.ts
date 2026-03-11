@@ -128,7 +128,7 @@ export function createAdminWsHandler(relay: RelayTransport): AdminWsHandler {
             sendToAdmin({ type: 'error', message: 'Session already exists' });
             return;
           }
-          session = new Session(command.words);
+          session = new Session('bingo', command.words);
           session.addEventListener(handleSessionEvent);
           adminSocket = ws;
           sendToAdmin({ type: 'session_created', sessionId: session.id });

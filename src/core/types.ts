@@ -44,7 +44,7 @@ export interface GameStartedEvent {
   type: 'game_started';
   roundNumber: number;
   playerId: string;
-  playerCard: import('./bingo-card').BingoCard;
+  playerCard: import('./games/bingo/bingo-card').BingoCard;
 }
 
 export interface PlayerWonEvent {
@@ -60,7 +60,7 @@ export interface NewRoundStartedEvent {
   type: 'new_round_started';
   roundNumber: number;
   playerId: string;
-  playerCard: import('./bingo-card').BingoCard;
+  playerCard: import('./games/bingo/bingo-card').BingoCard;
 }
 
 export interface PlayerJoinedEvent {

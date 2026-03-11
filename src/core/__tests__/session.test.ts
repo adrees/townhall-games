@@ -28,29 +28,29 @@ describe('Session', () => {
 
   describe('Session Creation', () => {
     it('creates a session with a valid word list', () => {
-      const session = new Session(sampleBuzzwords);
+      const session = new Session('bingo', sampleBuzzwords);
       expect(session).toBeDefined();
       expect(session.id).toBeDefined();
       expect(typeof session.id).toBe('string');
     });
 
     it('rejects a word list with fewer than 24 unique words', () => {
-      expect(() => new Session(sampleBuzzwords.slice(0, 10))).toThrow(/24/);
+      expect(() => new Session('bingo', sampleBuzzwords.slice(0, 10))).toThrow(/24/);
     });
 
     it('generates a unique session ID', () => {
-      const s1 = new Session(sampleBuzzwords);
-      const s2 = new Session(sampleBuzzwords);
+      const s1 = new Session('bingo', sampleBuzzwords);
+      const s2 = new Session('bingo', sampleBuzzwords);
       expect(s1.id).not.toBe(s2.id);
     });
 
     it('starts with no players', () => {
-      const session = new Session(sampleBuzzwords);
+      const session = new Session('bingo', sampleBuzzwords);
       expect(session.getPlayers()).toEqual([]);
     });
 
     it('starts with no game (status is no_game)', () => {
-      const session = new Session(sampleBuzzwords);
+      const session = new Session('bingo', sampleBuzzwords);
       expect(session.getGameStatus()).toBe('no_game');
     });
   });
@@ -61,7 +61,7 @@ describe('Session', () => {
     let session: Session;
 
     beforeEach(() => {
-      session = new Session(sampleBuzzwords);
+      session = new Session('bingo', sampleBuzzwords);
     });
 
     it('adds a player and returns Player object', () => {
@@ -118,7 +118,7 @@ describe('Session', () => {
     let session: Session;
 
     beforeEach(() => {
-      session = new Session(sampleBuzzwords);
+      session = new Session('bingo', sampleBuzzwords);
     });
 
     it('starts a game and sets status to active', () => {
@@ -168,7 +168,7 @@ describe('Session', () => {
     let session: Session;
 
     beforeEach(() => {
-      session = new Session(sampleBuzzwords);
+      session = new Session('bingo', sampleBuzzwords);
     });
 
     it('adds a listener and receives events', () => {
@@ -228,7 +228,7 @@ describe('Session', () => {
     let session: Session;
 
     beforeEach(() => {
-      session = new Session(sampleBuzzwords);
+      session = new Session('bingo', sampleBuzzwords);
     });
 
     it('delegates markWord to the game', () => {
@@ -309,7 +309,7 @@ describe('Session', () => {
     let session: Session;
 
     beforeEach(() => {
-      session = new Session(sampleBuzzwords);
+      session = new Session('bingo', sampleBuzzwords);
     });
 
     it('returns empty leaderboard with no players', () => {
@@ -402,7 +402,7 @@ describe('Session', () => {
     let session: Session;
 
     beforeEach(() => {
-      session = new Session(sampleBuzzwords);
+      session = new Session('bingo', sampleBuzzwords);
     });
 
     it('starts a new round after previous round finishes', () => {
@@ -478,7 +478,7 @@ describe('Session', () => {
     let session: Session;
 
     beforeEach(() => {
-      session = new Session(sampleBuzzwords);
+      session = new Session('bingo', sampleBuzzwords);
     });
 
     it('late joiner gets a card when game is active', () => {
