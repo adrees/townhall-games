@@ -17,9 +17,10 @@ interface NamedRoute {
 
 // Named routes: URL → { file relative to publicDir, allowed roles }
 const NAMED_ROUTES: Record<string, NamedRoute> = {
-  '/':          { file: 'index.html', roles: ['unified', 'relay'] },
-  '/admin':     { file: 'admin.html', roles: ['unified', 'admin'] },
-  '/style.css': { file: 'style.css',  roles: ['unified', 'admin', 'relay'] },
+  '/':          { file: 'index.html',      roles: ['unified', 'relay'] },
+  '/admin':     { file: 'admin.html',      roles: ['unified', 'admin'] },
+  '/play':      { file: 'play/index.html', roles: ['unified', 'relay'] },
+  '/style.css': { file: 'style.css',       roles: ['unified', 'admin', 'relay'] },
 };
 
 export function handleStaticRequest(
@@ -54,9 +55,15 @@ export function handleStaticRequest(
     return;
   }
 
-  // JS wildcard — all roles allowed; basename-only to prevent traversal
+  // JS wildcard — all roles allowed; path must resolve within publicDir
   if (pathname.endsWith('.js')) {
-    const filePath = path.join(publicDir, path.basename(pathname));
+    const resolvedPublic = path.resolve(publicDir);
+    const filePath = path.resolve(path.join(publicDir, pathname));
+    if (!filePath.startsWith(resolvedPublic + path.sep) && filePath !== resolvedPublic) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not Found');
+      return;
+    }
     fs.readFile(filePath, (err, data) => {
       if (err) {
         res.writeHead(404, { 'Content-Type': 'text/plain' });

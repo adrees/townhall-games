@@ -1,19 +1,19 @@
 import { connect, send } from './ws-client.js';
-import { handleMessage } from './handlers.js';
+import { handlers } from './handlers.js';
 import { showNotification } from './ui.js';
 import { state } from './state.js';
+import { triviaHandlers, initAnswerButtons } from './trivia-handlers.js';
 // --- Join form -----------------------------------------------------------
-function joinGame() {
-    const input = document.getElementById('screenName');
-    const name = input.value.trim();
-    if (!name) {
+function joinGame(name) {
+    const screenName = name ?? document.getElementById('screenName').value.trim();
+    if (!screenName) {
         showNotification('Please enter a screen name', 'error');
         return;
     }
-    send({ type: 'join', screenName: name });
+    send({ type: 'join', screenName });
 }
 document.getElementById('joinBtn')
-    .addEventListener('click', joinGame);
+    .addEventListener('click', () => joinGame());
 document.getElementById('screenName')
     .addEventListener('keydown', (e) => {
     if (e.key === 'Enter')
@@ -36,5 +36,24 @@ document.getElementById('bingoGrid')
         send({ type: 'mark_word', word: state.grid[r][c] });
     }
 });
+// --- Combined message handler (trivia first, bingo fallback) ---------------
+function combinedHandler(msg) {
+    const triviaHandler = triviaHandlers[msg.type];
+    if (triviaHandler) {
+        triviaHandler(msg);
+        return;
+    }
+    const bingoHandler = handlers[msg.type];
+    if (bingoHandler)
+        bingoHandler(msg);
+}
+// --- Auto-join via query params ---------------------------------------------
+function getAutoJoinName() {
+    const params = new URLSearchParams(location.search);
+    const name = params.get('name');
+    return name && name.trim() ? name.trim() : null;
+}
+const autoJoinName = getAutoJoinName();
 // --- Start connection -------------------------------------------------------
-connect(handleMessage);
+connect(combinedHandler, autoJoinName ? () => joinGame(autoJoinName) : undefined);
+initAnswerButtons();
