@@ -8,6 +8,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.css':  'text/css; charset=utf-8',
   '.js':   'application/javascript; charset=utf-8',
+  '.csv':  'text/csv; charset=utf-8',
 };
 
 interface NamedRoute {
@@ -17,10 +18,13 @@ interface NamedRoute {
 
 // Named routes: URL → { file relative to publicDir, allowed roles }
 const NAMED_ROUTES: Record<string, NamedRoute> = {
-  '/':          { file: 'index.html',      roles: ['unified', 'relay'] },
-  '/admin':     { file: 'admin.html',      roles: ['unified', 'admin'] },
-  '/play':      { file: 'play/index.html', roles: ['unified', 'relay'] },
-  '/style.css': { file: 'style.css',       roles: ['unified', 'admin', 'relay'] },
+  '/':                  { file: 'index.html',          roles: ['unified', 'relay'] },
+  '/admin':             { file: 'admin/index.html',    roles: ['unified', 'admin'] },
+  '/admin/bingo':       { file: 'admin/bingo.html',    roles: ['unified', 'admin'] },
+  '/admin/trivia':      { file: 'admin/trivia.html',   roles: ['unified', 'admin'] },
+  '/play':              { file: 'play/index.html',     roles: ['unified', 'relay'] },
+  '/broadcast/trivia':  { file: 'broadcast/trivia.html', roles: ['unified', 'relay'] },
+  '/style.css':         { file: 'style.css',           roles: ['unified', 'admin', 'relay'] },
 };
 
 export function handleStaticRequest(
@@ -50,6 +54,27 @@ export function handleStaticRequest(
         return;
       }
       res.writeHead(200, { 'Content-Type': contentType });
+      res.end(data);
+    });
+    return;
+  }
+
+  // CSV wildcard — fixture files; path must resolve within publicDir
+  if (pathname.endsWith('.csv')) {
+    const resolvedPublic = path.resolve(publicDir);
+    const filePath = path.resolve(path.join(publicDir, pathname));
+    if (!filePath.startsWith(resolvedPublic + path.sep) && filePath !== resolvedPublic) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Not Found');
+      return;
+    }
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8' });
       res.end(data);
     });
     return;

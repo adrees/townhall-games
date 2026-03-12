@@ -132,7 +132,7 @@
         alert('Need at least 24 unique words');
         return;
       }
-      ws.send(JSON.stringify({ type: 'create_session', words: words }));
+      ws.send(JSON.stringify({ type: 'create_session', gameMode: 'bingo', words: words }));
     }
 
     function startGame() {

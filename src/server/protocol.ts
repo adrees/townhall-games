@@ -1,11 +1,10 @@
-import type { WinPattern, PlayerScore, AnswerOption } from '../core/types';
+import type { WinPattern, PlayerScore, AnswerOption, TriviaQuestion } from '../core/types';
 
 // Client → Server commands
 
-export interface CreateSessionCommand {
-  type: 'create_session';
-  words: string[];
-}
+export type CreateSessionCommand =
+  | { type: 'create_session'; gameMode: 'bingo'; words: string[] }
+  | { type: 'create_session'; gameMode: 'trivia'; questions: TriviaQuestion[]; speed?: boolean };
 
 export interface StartGameCommand {
   type: 'start_game';
@@ -255,10 +254,32 @@ export function parseCommand(raw: string): Command | null {
 
   switch (obj.type) {
     case 'create_session':
-      if (!Array.isArray(obj.words) || !obj.words.every((w: unknown) => typeof w === 'string')) {
-        return null;
+      if (obj.gameMode === 'trivia') {
+        if (!Array.isArray(obj.questions)) return null;
+        const questions = obj.questions as Record<string, unknown>[];
+        const validQuestions = questions.every(
+          (q) =>
+            typeof q === 'object' && q !== null &&
+            typeof q.question === 'string' && q.question.trim() !== '' &&
+            typeof q.a === 'string' && typeof q.b === 'string' &&
+            typeof q.c === 'string' && typeof q.d === 'string' &&
+            VALID_ANSWER_OPTIONS.has(q.correct as string)
+        );
+        if (!validQuestions) return null;
+        return {
+          type: 'create_session',
+          gameMode: 'trivia',
+          questions: obj.questions as import('../core/types').TriviaQuestion[],
+          speed: obj.speed === true,
+        };
       }
-      return { type: 'create_session', words: obj.words as string[] };
+      if (obj.gameMode === 'bingo') {
+        if (!Array.isArray(obj.words) || !obj.words.every((w: unknown) => typeof w === 'string')) {
+          return null;
+        }
+        return { type: 'create_session', gameMode: 'bingo', words: obj.words as string[] };
+      }
+      return null;
 
     case 'start_game':
       return { type: 'start_game' };

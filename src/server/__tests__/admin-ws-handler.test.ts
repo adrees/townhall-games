@@ -96,7 +96,7 @@ describe('AdminWsHandler', () => {
 
   function connectAdmin(): void {
     handler.handleAdminConnection(adminWs as any);
-    adminWs.receive({ type: 'create_session', words: makeWords() });
+    adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
   }
 
   function joinPlayer(connectionId: string, screenName: string): void {
@@ -106,7 +106,7 @@ describe('AdminWsHandler', () => {
   describe('create_session', () => {
     it('creates a session and responds with session_created', () => {
       handler.handleAdminConnection(adminWs as any);
-      adminWs.receive({ type: 'create_session', words: makeWords() });
+      adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
       const msg = adminWs.lastMessage();
       expect(msg?.type).toBe('session_created');
       expect(msg?.sessionId).toBeDefined();
@@ -114,8 +114,31 @@ describe('AdminWsHandler', () => {
 
     it('returns error if session already exists', () => {
       connectAdmin();
-      adminWs.receive({ type: 'create_session', words: makeWords() });
+      adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
       expect(adminWs.lastMessage()?.type).toBe('error');
+    });
+
+    describe('trivia', () => {
+      const makeQuestions = (n = 3): TriviaQuestion[] =>
+        Array.from({ length: n }, (_, i) => ({
+          question: `Q${i + 1}?`,
+          a: 'A1', b: 'B1', c: 'C1', d: 'D1',
+          correct: 'A' as const,
+        }));
+
+      it('creates a trivia session and responds with session_created', () => {
+        handler.handleAdminConnection(adminWs as any);
+        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
+        const msg = adminWs.lastMessage();
+        expect(msg?.type).toBe('session_created');
+        expect(msg?.sessionId).toBeDefined();
+      });
+
+      it('uses 3-second timer when speed: true', () => {
+        handler.handleAdminConnection(adminWs as any);
+        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions(), speed: true });
+        expect(adminWs.lastMessage()?.type).toBe('session_created');
+      });
     });
   });
 

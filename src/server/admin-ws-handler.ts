@@ -21,7 +21,8 @@ export interface AdminWsHandler {
   handlePlayerDisconnected(connectionId: string): void;
 }
 
-export function createAdminWsHandler(relay: RelayTransport, triviaGame: TriviaGame | null = null, injectedSession: Session | null = null): AdminWsHandler {
+export function createAdminWsHandler(relay: RelayTransport, injectedTriviaGame: TriviaGame | null = null, injectedSession: Session | null = null): AdminWsHandler {
+  let triviaGame: TriviaGame | null = injectedTriviaGame;
   let session: Session | null = injectedSession;
   let adminSocket: WebSocket | null = null;
   const connectionToPlayer = new Map<string, PlayerInfo>();
@@ -130,7 +131,12 @@ export function createAdminWsHandler(relay: RelayTransport, triviaGame: TriviaGa
       switch (command.type) {
         case 'create_session': {
           if (session) { sendToAdmin({ type: 'error', message: 'Session already exists' }); return; }
-          session = new Session('bingo', command.words);
+          if (command.gameMode === 'trivia') {
+            session = new Session('trivia', []);
+            triviaGame = new TriviaGame(session.id, command.questions, { speedMode: command.speed });
+          } else {
+            session = new Session('bingo', command.words);
+          }
           session.addEventListener(handleSessionEvent);
           sendToAdmin({ type: 'session_created', sessionId: session.id });
           break;

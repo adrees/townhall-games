@@ -50,7 +50,7 @@ describe('named routes — unified role', () => {
     expect(res.end).toHaveBeenCalledWith(data);
   });
 
-  it('GET /admin → 200 text/html serving admin.html', () => {
+  it('GET /admin → 200 text/html serving admin/index.html', () => {
     const data = Buffer.from('<html>admin</html>');
     simulateReadFile(data);
     const req = makeReq('/admin');
@@ -59,7 +59,7 @@ describe('named routes — unified role', () => {
     handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
 
     expect(mockReadFile).toHaveBeenCalledWith(
-      expect.stringContaining('admin.html'),
+      expect.stringContaining('admin/index.html'),
       expect.any(Function),
     );
     expect(res.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -289,6 +289,49 @@ describe('JS wildcard route', () => {
     expect(res.writeHead).toHaveBeenCalledWith(200, {
       'Content-Type': 'application/javascript; charset=utf-8',
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CSV fixture route
+// ---------------------------------------------------------------------------
+
+describe('CSV fixture route', () => {
+  it('GET /fixtures/trivia-questions.csv → 200 text/csv', () => {
+    const data = Buffer.from('question,a,b,c,d,correct\nQ1?,A,B,C,D,A');
+    simulateReadFile(data);
+    const req = makeReq('/fixtures/trivia-questions.csv');
+    const res = makeRes();
+
+    handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
+
+    expect(mockReadFile).toHaveBeenCalledWith(
+      expect.stringContaining('fixtures/trivia-questions.csv'),
+      expect.any(Function),
+    );
+    expect(res.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/csv; charset=utf-8' });
+    expect(res.end).toHaveBeenCalledWith(data);
+  });
+
+  it('path traversal in CSV request → 404', () => {
+    const req = makeReq('/fixtures/../../../evil.csv');
+    const res = makeRes();
+
+    handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
+
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
+  });
+
+  it('missing CSV file → 404', () => {
+    const err = Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) as NodeJS.ErrnoException;
+    simulateReadFile(null, err);
+    const req = makeReq('/fixtures/missing.csv');
+    const res = makeRes();
+
+    handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
+
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
   });
 });
 

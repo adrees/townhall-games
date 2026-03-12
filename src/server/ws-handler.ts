@@ -13,7 +13,8 @@ export interface WsHandler {
   handleConnection(ws: WebSocket): void;
 }
 
-export function createWsHandler(triviaGame: TriviaGame | null = null, injectedSession: Session | null = null): WsHandler {
+export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, injectedSession: Session | null = null): WsHandler {
+  let triviaGame: TriviaGame | null = injectedTriviaGame;
   let session: Session | null = injectedSession;
   let adminSocket: WebSocket | null = null;
   const socketToPlayer = new Map<WebSocket, PlayerInfo>();
@@ -139,7 +140,12 @@ export function createWsHandler(triviaGame: TriviaGame | null = null, injectedSe
       switch (command.type) {
         case 'create_session': {
           if (session) { send(ws, { type: 'error', message: 'Session already exists' }); return; }
-          session = new Session('bingo', command.words);
+          if (command.gameMode === 'trivia') {
+            session = new Session('trivia', []);
+            triviaGame = new TriviaGame(session.id, command.questions, { speedMode: command.speed });
+          } else {
+            session = new Session('bingo', command.words);
+          }
           session.addEventListener(handleSessionEvent);
           adminSocket = ws;
           send(ws, { type: 'session_created', sessionId: session.id });

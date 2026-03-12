@@ -20,21 +20,50 @@ describe('parseCommand', () => {
   });
 
   describe('create_session', () => {
-    it('parses valid create_session', () => {
-      const cmd = parseCommand('{"type":"create_session","words":["a","b","c"]}');
-      expect(cmd).toEqual({ type: 'create_session', words: ['a', 'b', 'c'] });
+    describe('bingo', () => {
+      it('parses valid bingo create_session', () => {
+        const cmd = parseCommand('{"type":"create_session","gameMode":"bingo","words":["a","b","c"]}');
+        expect(cmd).toEqual({ type: 'create_session', gameMode: 'bingo', words: ['a', 'b', 'c'] });
+      });
+
+      it('returns null if gameMode is missing', () => {
+        expect(parseCommand('{"type":"create_session","words":["a"]}')).toBeNull();
+      });
+
+      it('returns null if words is missing for bingo', () => {
+        expect(parseCommand('{"type":"create_session","gameMode":"bingo"}')).toBeNull();
+      });
+
+      it('returns null if words contains non-strings', () => {
+        expect(parseCommand('{"type":"create_session","gameMode":"bingo","words":[1,2]}')).toBeNull();
+      });
     });
 
-    it('returns null if words is missing', () => {
-      expect(parseCommand('{"type":"create_session"}')).toBeNull();
-    });
+    describe('trivia', () => {
+      const validQuestion = { question: 'Q?', a: 'A1', b: 'B1', c: 'C1', d: 'D1', correct: 'A' };
 
-    it('returns null if words is not an array', () => {
-      expect(parseCommand('{"type":"create_session","words":"hello"}')).toBeNull();
-    });
+      it('parses valid trivia create_session', () => {
+        const cmd = parseCommand(JSON.stringify({ type: 'create_session', gameMode: 'trivia', questions: [validQuestion] }));
+        expect(cmd).toEqual({ type: 'create_session', gameMode: 'trivia', questions: [validQuestion], speed: false });
+      });
 
-    it('returns null if words contains non-strings', () => {
-      expect(parseCommand('{"type":"create_session","words":[1,2]}')).toBeNull();
+      it('parses trivia create_session with speed: true', () => {
+        const cmd = parseCommand(JSON.stringify({ type: 'create_session', gameMode: 'trivia', questions: [validQuestion], speed: true }));
+        expect(cmd).toEqual({ type: 'create_session', gameMode: 'trivia', questions: [validQuestion], speed: true });
+      });
+
+      it('returns null if questions is missing', () => {
+        expect(parseCommand('{"type":"create_session","gameMode":"trivia"}')).toBeNull();
+      });
+
+      it('returns null if a question has an invalid correct field', () => {
+        const bad = { ...validQuestion, correct: 'E' };
+        expect(parseCommand(JSON.stringify({ type: 'create_session', gameMode: 'trivia', questions: [bad] }))).toBeNull();
+      });
+
+      it('returns null for unknown gameMode', () => {
+        expect(parseCommand('{"type":"create_session","gameMode":"other"}')).toBeNull();
+      });
     });
   });
 
