@@ -83,3 +83,45 @@ export type GameEvent =
   | PlayerLeftEvent;
 
 export type EventListener = (event: GameEvent) => void;
+
+// Trivia types
+
+export type AnswerOption = 'A' | 'B' | 'C' | 'D';
+
+export type TriviaState =
+  | 'waiting'
+  | 'question_preview'
+  | 'question_live'
+  | 'breakdown'
+  | 'answer_revealed'
+  | 'survivors'
+  | 'game_over';
+
+export interface TriviaQuestion {
+  question: string;
+  a: string;
+  b: string;
+  c: string;
+  d: string;
+  correct: AnswerOption;
+}
+
+export interface AnswerCounts {
+  A: number;
+  B: number;
+  C: number;
+  D: number;
+}
+
+export interface RoundResult {
+  questionIndex: number;
+  correctAnswer: AnswerOption;
+  eliminated: string[];
+  survivors: string[];
+  counts: AnswerCounts;
+}
+
+export interface TriviaWinner {
+  playerId: string;
+  screenName: string;
+}
