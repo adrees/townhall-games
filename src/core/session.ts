@@ -20,9 +20,10 @@ export class Session {
   private scores: Map<string, { totalPoints: number; roundsWon: number; lastWinRound?: number }> = new Map();
 
   constructor(gameMode: 'bingo' | 'trivia', wordList: string[]) {
-    // Validate word list by trying to construct a BingoGame (reuses its validation)
-    // We create a throwaway game just to validate, then discard it
-    new BingoGame('validate', wordList);
+    if (gameMode === 'bingo') {
+      // Validate word list by trying to construct a BingoGame (reuses its validation)
+      new BingoGame('validate', wordList);
+    }
     this.id = randomUUID();
     this.gameMode = gameMode;
     this.wordList = wordList;

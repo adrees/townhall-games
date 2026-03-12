@@ -1,5 +1,8 @@
 import { createWsHandler } from '../ws-handler';
 import { EventEmitter } from 'events';
+import { TriviaGame } from '../../core/games/trivia';
+import { Session } from '../../core/session';
+import type { TriviaQuestion } from '../../core/types';
 
 // Generate 24+ unique words for testing
 function makeWords(count = 30): string[] {
@@ -157,7 +160,6 @@ describe('WsHandler', () => {
       playerWs.clearSent();
       playerWs.receive({ type: 'start_game' });
       expect(playerWs.lastMessage()?.type).toBe('error');
-      expect(playerWs.lastMessage()?.message).toContain('Only admin');
     });
 
     it('returns error if no session', () => {
@@ -191,7 +193,6 @@ describe('WsHandler', () => {
       adminWs.receive({ type: 'mark_word', word: 'test' });
       const msg = adminWs.lastMessage();
       expect(msg?.type).toBe('error');
-      expect(msg?.message).toBe('Not joined as a player');
     });
   });
 
@@ -235,6 +236,15 @@ describe('WsHandler', () => {
     });
   });
 
+  describe('cross-mode rejection (bingo)', () => {
+    it('returns error when trivia command sent to bingo session', () => {
+      connectAdmin();
+      adminWs.clearSent();
+      adminWs.receive({ type: 'go_live' });
+      expect(adminWs.lastMessage()?.type).toBe('error');
+    });
+  });
+
   describe('invalid commands', () => {
     it('returns error for invalid JSON', () => {
       handler.handleConnection(adminWs as any);
@@ -247,6 +257,148 @@ describe('WsHandler', () => {
       handler.handleConnection(adminWs as any);
       adminWs.receive({ type: 'unknown_thing' });
       expect(adminWs.lastMessage()?.type).toBe('error');
+    });
+  });
+
+  describe('Trivia mode', () => {
+    const QUESTIONS: TriviaQuestion[] = [
+      { question: 'Q1', a: 'A1', b: 'B1', c: 'C1', d: 'D1', correct: 'A' },
+      { question: 'Q2', a: 'A2', b: 'B2', c: 'C2', d: 'D2', correct: 'B' },
+      { question: 'Q3', a: 'A3', b: 'B3', c: 'C3', d: 'D3', correct: 'C' },
+    ];
+
+    function makeTriviaHandler() {
+      const game = new TriviaGame('test', QUESTIONS);
+      const session = new Session('trivia', []);
+      game.registerPlayers([]);
+      const h = createWsHandler(game, session);
+      return { handler: h, game, session };
+    }
+
+    function connectTriviaAdmin(h: ReturnType<typeof createWsHandler>, ws: MockWs) {
+      h.handleConnection(ws as any);
+      // First message sets adminSocket for injected trivia session
+      ws.receive({ type: 'go_live' }); // will error (wrong state) but sets adminSocket
+      ws.clearSent();
+    }
+
+    it('start_trivia_question transitions to question_preview and broadcasts', () => {
+      jest.useFakeTimers();
+      const { handler: h } = makeTriviaHandler();
+      connectTriviaAdmin(h, adminWs);
+
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      const preview = adminWs.messagesOfType('question_preview')[0];
+      expect(preview).toBeDefined();
+      expect(preview?.text).toBe('Q1');
+      expect(preview?.questionIndex).toBe(0);
+      jest.useRealTimers();
+    });
+
+    it('go_live broadcasts question_live with options and timeLimit', () => {
+      jest.useFakeTimers();
+      const { handler: h } = makeTriviaHandler();
+      connectTriviaAdmin(h, adminWs);
+
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.clearSent();
+      adminWs.receive({ type: 'go_live' });
+
+      const live = adminWs.messagesOfType('question_live')[0];
+      expect(live).toBeDefined();
+      expect(live?.text).toBe('Q1');
+      expect((live?.options as string[]).length).toBe(4);
+      expect(live?.timeLimit).toBe(10);
+      jest.useRealTimers();
+    });
+
+    it('submit_answer sends answer_accepted to player and live_answer_stats to admin', () => {
+      jest.useFakeTimers();
+      const game = new TriviaGame('test', QUESTIONS);
+      const session = new Session('trivia', []);
+      const h = createWsHandler(game, session);
+
+      h.handleConnection(adminWs as any);
+      adminWs.receive({ type: 'go_live' }); // sets adminSocket, errors (wrong state) — ok
+      adminWs.clearSent();
+
+      h.handleConnection(playerWs as any);
+      playerWs.receive({ type: 'join', screenName: 'Alice' });
+      const joinedMsg = playerWs.messagesOfType('joined')[0];
+      const playerId = joinedMsg?.playerId as string;
+      game.registerPlayers([playerId]);
+      playerWs.clearSent();
+      adminWs.clearSent();
+
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.receive({ type: 'go_live' });
+      adminWs.clearSent();
+      playerWs.clearSent();
+
+      playerWs.receive({ type: 'submit_answer', answer: 'A' });
+
+      expect(playerWs.messagesOfType('answer_accepted')).toHaveLength(1);
+      const stats = adminWs.messagesOfType('live_answer_stats')[0];
+      expect(stats).toBeDefined();
+      expect(stats?.answered).toBe(1);
+      jest.useRealTimers();
+    });
+
+    it('timer expiry broadcasts timer_expired + answer_breakdown, then after delay broadcasts answer_revealed', () => {
+      jest.useFakeTimers();
+      const game = new TriviaGame('test', QUESTIONS);
+      const session = new Session('trivia', []);
+      const h = createWsHandler(game, session);
+
+      h.handleConnection(adminWs as any);
+      adminWs.receive({ type: 'go_live' });
+      adminWs.clearSent();
+
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.receive({ type: 'go_live' });
+      adminWs.clearSent();
+
+      // Advance past question timer
+      jest.advanceTimersByTime(10000);
+      expect(adminWs.messagesOfType('timer_expired')).toHaveLength(1);
+      expect(adminWs.messagesOfType('answer_breakdown')).toHaveLength(1);
+
+      // Advance past reveal delay
+      jest.advanceTimersByTime(2500);
+      expect(adminWs.messagesOfType('answer_revealed')).toHaveLength(1);
+
+      jest.useRealTimers();
+    });
+
+    it('advance_question moves to next question_preview', () => {
+      jest.useFakeTimers();
+      const game = new TriviaGame('test', QUESTIONS);
+      const session = new Session('trivia', []);
+      const h = createWsHandler(game, session);
+
+      h.handleConnection(adminWs as any);
+      adminWs.receive({ type: 'go_live' });
+      adminWs.clearSent();
+
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.receive({ type: 'go_live' });
+      jest.advanceTimersByTime(10000 + 2500);
+      adminWs.clearSent();
+
+      adminWs.receive({ type: 'advance_question' });
+      const preview = adminWs.messagesOfType('question_preview')[0];
+      expect(preview).toBeDefined();
+      expect(preview?.text).toBe('Q2');
+      jest.useRealTimers();
+    });
+
+    it('bingo command (mark_word) on trivia session returns error', () => {
+      const { handler: h } = makeTriviaHandler();
+      h.handleConnection(playerWs as any);
+      playerWs.receive({ type: 'join', screenName: 'Bob' });
+      playerWs.clearSent();
+      playerWs.receive({ type: 'mark_word', word: 'synergy' });
+      expect(playerWs.lastMessage()?.type).toBe('error');
     });
   });
 

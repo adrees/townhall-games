@@ -1,5 +1,8 @@
 import { createAdminWsHandler } from '../admin-ws-handler';
 import { EventEmitter } from 'events';
+import { TriviaGame } from '../../core/games/trivia';
+import { Session } from '../../core/session';
+import type { TriviaQuestion } from '../../core/types';
 
 function makeWords(count = 30): string[] {
   return Array.from({ length: count }, (_, i) => `word${i + 1}`);
@@ -276,6 +279,113 @@ describe('AdminWsHandler', () => {
       const msg = relay.lastSentTo('conn-1');
       expect(msg?.type).toBe('error');
       expect(msg?.message).toBe('Invalid command');
+    });
+  });
+
+  describe('cross-mode rejection (bingo)', () => {
+    it('returns error when trivia admin command sent to bingo session', () => {
+      connectAdmin();
+      adminWs.clearSent();
+      adminWs.receive({ type: 'go_live' });
+      expect(adminWs.lastMessage()?.type).toBe('error');
+    });
+
+    it('returns error when trivia player command sent to bingo session', () => {
+      connectAdmin();
+      joinPlayer('conn-1', 'Alice');
+      relay.clearAll();
+      handler.handlePlayerCommand('conn-1', JSON.stringify({ type: 'submit_answer', answer: 'A' }));
+      const msg = relay.lastSentTo('conn-1');
+      expect(msg?.type).toBe('error');
+    });
+  });
+
+  describe('Trivia mode', () => {
+    const QUESTIONS: TriviaQuestion[] = [
+      { question: 'Q1', a: 'A1', b: 'B1', c: 'C1', d: 'D1', correct: 'A' },
+      { question: 'Q2', a: 'A2', b: 'B2', c: 'C2', d: 'D2', correct: 'B' },
+      { question: 'Q3', a: 'A3', b: 'B3', c: 'C3', d: 'D3', correct: 'C' },
+    ];
+
+    function makeTriviaHandler() {
+      const game = new TriviaGame('test', QUESTIONS);
+      const session = new Session('trivia', []);
+      game.registerPlayers([]);
+      const h = createAdminWsHandler(relay, game, session);
+      return { handler: h, game, session };
+    }
+
+    it('start_trivia_question broadcasts question_preview to admin and relay', () => {
+      jest.useFakeTimers();
+      const { handler: h } = makeTriviaHandler();
+      h.handleAdminConnection(adminWs as any);
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+
+      const adminPreview = adminWs.messagesOfType('question_preview')[0];
+      expect(adminPreview?.text).toBe('Q1');
+
+      const relayPreview = relay.broadcastsOfType('question_preview')[0];
+      expect(relayPreview?.text).toBe('Q1');
+      jest.useRealTimers();
+    });
+
+    it('go_live broadcasts question_live via relay broadcastToPlayers', () => {
+      jest.useFakeTimers();
+      const { handler: h } = makeTriviaHandler();
+      h.handleAdminConnection(adminWs as any);
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      relay.clearAll(); adminWs.clearSent();
+
+      adminWs.receive({ type: 'go_live' });
+
+      const live = relay.broadcastsOfType('question_live')[0];
+      expect(live).toBeDefined();
+      expect(live?.text).toBe('Q1');
+      expect((live?.options as string[]).length).toBe(4);
+      jest.useRealTimers();
+    });
+
+    it('player submit_answer sends answer_accepted via sendToPlayer and live_answer_stats to admin', () => {
+      jest.useFakeTimers();
+      const game = new TriviaGame('test', QUESTIONS);
+      const session = new Session('trivia', []);
+      const h = createAdminWsHandler(relay, game, session);
+      h.handleAdminConnection(adminWs as any);
+
+      h.handlePlayerCommand('conn-1', JSON.stringify({ type: 'join', screenName: 'Alice' }));
+      const joinedMsg = relay.lastSentTo('conn-1');
+      const playerId = joinedMsg?.playerId as string;
+      game.registerPlayers([playerId]);
+      relay.clearAll(); adminWs.clearSent();
+
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.receive({ type: 'go_live' });
+      relay.clearAll(); adminWs.clearSent();
+
+      h.handlePlayerCommand('conn-1', JSON.stringify({ type: 'submit_answer', answer: 'A' }));
+
+      const accepted = relay.allSentTo('conn-1').find(m => m.type === 'answer_accepted');
+      expect(accepted).toBeDefined();
+      const stats = adminWs.messagesOfType('live_answer_stats')[0];
+      expect(stats?.answered).toBe(1);
+      jest.useRealTimers();
+    });
+
+    it('timer expiry + reveal sequence broadcasts via relay', () => {
+      jest.useFakeTimers();
+      const { handler: h } = makeTriviaHandler();
+      h.handleAdminConnection(adminWs as any);
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.receive({ type: 'go_live' });
+      relay.clearAll(); adminWs.clearSent();
+
+      jest.advanceTimersByTime(10000);
+      expect(relay.broadcastsOfType('timer_expired')).toHaveLength(1);
+      expect(relay.broadcastsOfType('answer_breakdown')).toHaveLength(1);
+
+      jest.advanceTimersByTime(2500);
+      expect(relay.broadcastsOfType('answer_revealed')).toHaveLength(1);
+      jest.useRealTimers();
     });
   });
 });

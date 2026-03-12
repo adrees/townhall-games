@@ -1,4 +1,4 @@
-import type { WinPattern, PlayerScore } from '../core/types';
+import type { WinPattern, PlayerScore, AnswerOption } from '../core/types';
 
 // Client → Server commands
 
@@ -25,14 +25,40 @@ export interface MarkWordCommand {
   word: string;
 }
 
+// Trivia admin → server commands
+
+export interface StartTriviaQuestionCommand {
+  type: 'start_trivia_question';
+  questionIndex: number;
+}
+
+export interface GoLiveCommand {
+  type: 'go_live';
+}
+
+export interface AdvanceQuestionCommand {
+  type: 'advance_question';
+}
+
+// Trivia player → server commands
+
+export interface SubmitAnswerCommand {
+  type: 'submit_answer';
+  answer: AnswerOption;
+}
+
 export type Command =
   | CreateSessionCommand
   | StartGameCommand
   | StartNewRoundCommand
   | JoinCommand
-  | MarkWordCommand;
+  | MarkWordCommand
+  | StartTriviaQuestionCommand
+  | GoLiveCommand
+  | AdvanceQuestionCommand
+  | SubmitAnswerCommand;
 
-// Server → Client events
+// Server → Client events (Bingo)
 
 export interface SessionCreatedEvent {
   type: 'session_created';
@@ -99,6 +125,83 @@ export interface ErrorEvent {
   message: string;
 }
 
+// Server → All players (Trivia broadcasts)
+
+export interface QuestionPreviewEvent {
+  type: 'question_preview';
+  questionIndex: number;
+  text: string;
+}
+
+export interface QuestionLiveEvent {
+  type: 'question_live';
+  text: string;
+  options: [string, string, string, string];
+  timeLimit: number;
+}
+
+export interface TimerExpiredEvent {
+  type: 'timer_expired';
+}
+
+export interface AnswerBreakdownEvent {
+  type: 'answer_breakdown';
+  counts: { A: number; B: number; C: number; D: number };
+  totalAnswered: number;
+  totalPlayers: number;
+}
+
+export interface AnswerRevealedEvent {
+  type: 'answer_revealed';
+  correct: AnswerOption;
+  eliminated: string[];
+  survivors: string[];
+}
+
+export interface SurvivorsRegroupedEvent {
+  type: 'survivors_regrouped';
+  survivorCount: number;
+  survivorNames: string[];
+}
+
+export interface GameOverEvent {
+  type: 'game_over';
+  winners: string[];
+}
+
+// Server → Individual player (Trivia)
+
+export interface YouAreEliminatedEvent {
+  type: 'you_are_eliminated';
+  correctAnswer: AnswerOption;
+  yourAnswer: AnswerOption | null;
+}
+
+export interface YouSurvivedEvent {
+  type: 'you_survived';
+  survivorCount: number;
+}
+
+export interface AnswerAcceptedEvent {
+  type: 'answer_accepted';
+}
+
+// Server → Admin only (Trivia)
+
+export interface LiveAnswerStatsEvent {
+  type: 'live_answer_stats';
+  counts: { A: number; B: number; C: number; D: number };
+  answered: number;
+  remaining: number;
+}
+
+export interface QuestionResultEvent {
+  type: 'question_result';
+  correct: AnswerOption;
+  eliminated: string[];
+  survivors: string[];
+}
+
 export type ServerEvent =
   | SessionCreatedEvent
   | JoinedEvent
@@ -109,7 +212,21 @@ export type ServerEvent =
   | PlayerWonEvent
   | GameStatusEvent
   | LeaderboardEvent
-  | ErrorEvent;
+  | ErrorEvent
+  | QuestionPreviewEvent
+  | QuestionLiveEvent
+  | TimerExpiredEvent
+  | AnswerBreakdownEvent
+  | AnswerRevealedEvent
+  | SurvivorsRegroupedEvent
+  | GameOverEvent
+  | YouAreEliminatedEvent
+  | YouSurvivedEvent
+  | AnswerAcceptedEvent
+  | LiveAnswerStatsEvent
+  | QuestionResultEvent;
+
+const VALID_ANSWER_OPTIONS = new Set<string>(['A', 'B', 'C', 'D']);
 
 const COMMAND_TYPES = new Set([
   'create_session',
@@ -117,6 +234,10 @@ const COMMAND_TYPES = new Set([
   'start_new_round',
   'join',
   'mark_word',
+  'start_trivia_question',
+  'go_live',
+  'advance_question',
+  'submit_answer',
 ]);
 
 export function parseCommand(raw: string): Command | null {
@@ -152,6 +273,22 @@ export function parseCommand(raw: string): Command | null {
     case 'mark_word':
       if (typeof obj.word !== 'string') return null;
       return { type: 'mark_word', word: obj.word };
+
+    case 'start_trivia_question':
+      if (typeof obj.questionIndex !== 'number') return null;
+      return { type: 'start_trivia_question', questionIndex: obj.questionIndex };
+
+    case 'go_live':
+      return { type: 'go_live' };
+
+    case 'advance_question':
+      return { type: 'advance_question' };
+
+    case 'submit_answer': {
+      const answer = typeof obj.answer === 'string' ? obj.answer.toUpperCase() : null;
+      if (!answer || !VALID_ANSWER_OPTIONS.has(answer)) return null;
+      return { type: 'submit_answer', answer: answer as AnswerOption };
+    }
 
     default:
       return null;
