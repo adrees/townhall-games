@@ -143,6 +143,45 @@ describe('named routes — role restrictions', () => {
 // JS wildcard route
 // ---------------------------------------------------------------------------
 
+describe('/play route', () => {
+  it('GET /play with unified role → 200, serves play/index.html', () => {
+    const data = Buffer.from('<html>play</html>');
+    simulateReadFile(data);
+    const req = makeReq('/play');
+    const res = makeRes();
+
+    handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
+
+    expect(mockReadFile).toHaveBeenCalledWith(
+      expect.stringContaining('play/index.html'),
+      expect.any(Function),
+    );
+    expect(res.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    expect(res.end).toHaveBeenCalledWith(data);
+  });
+
+  it('GET /play with relay role → 200', () => {
+    const data = Buffer.from('<html>play</html>');
+    simulateReadFile(data);
+    const req = makeReq('/play');
+    const res = makeRes();
+
+    handleStaticRequest(req, res, PUBLIC_DIR, 'relay');
+
+    expect(res.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  });
+
+  it('GET /play with admin role → 404 (not in allowlist)', () => {
+    const req = makeReq('/play');
+    const res = makeRes();
+
+    handleStaticRequest(req, res, PUBLIC_DIR, 'admin');
+
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
+  });
+});
+
 describe('JS wildcard route', () => {
   it('GET /player.js → 200 application/javascript', () => {
     const data = Buffer.from('export const x = 1;');
@@ -175,20 +214,15 @@ describe('JS wildcard route', () => {
     });
   });
 
-  it('directory traversal attempt uses basename only', () => {
-    const data = Buffer.from('safe');
-    simulateReadFile(data);
+  it('directory traversal attempt that escapes publicDir → 404', () => {
     const req = makeReq('/../../../evil.js');
     const res = makeRes();
 
     handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
 
-    // Must read from publicDir/evil.js, not a traversed path
-    const calledPath: string = mockReadFile.mock.calls[0][0];
-    expect(calledPath).toBe(`${PUBLIC_DIR}/evil.js`);
-    expect(res.writeHead).toHaveBeenCalledWith(200, {
-      'Content-Type': 'application/javascript; charset=utf-8',
-    });
+    // Path resolves outside publicDir — must be rejected before any fs access
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
   });
 
   it('GET /nonexistent.js → 404 when file missing', () => {
@@ -201,6 +235,34 @@ describe('JS wildcard route', () => {
 
     expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
     expect(res.end).toHaveBeenCalledWith('Not Found');
+  });
+
+  it('GET /shared/trivia-handlers.js → 200 application/javascript (subdirectory JS)', () => {
+    const data = Buffer.from('export const triviaHandlers = {};');
+    simulateReadFile(data);
+    const req = makeReq('/shared/trivia-handlers.js');
+    const res = makeRes();
+
+    handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
+
+    expect(mockReadFile).toHaveBeenCalledWith(
+      expect.stringContaining(`shared/trivia-handlers.js`),
+      expect.any(Function),
+    );
+    expect(res.writeHead).toHaveBeenCalledWith(200, {
+      'Content-Type': 'application/javascript; charset=utf-8',
+    });
+    expect(res.end).toHaveBeenCalledWith(data);
+  });
+
+  it('GET /shared/../admin/index.html → 404 (not a .js file, falls through to 404)', () => {
+    const req = makeReq('/shared/../admin/index.html');
+    const res = makeRes();
+
+    handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
+
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
   });
 
   it('GET /player.js with admin role → 200 (JS bypass is intentional)', () => {

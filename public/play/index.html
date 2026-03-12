@@ -48,8 +48,43 @@
         </table>
       </div>
     </div>
+
+    <!-- Trivia -->
+    <div id="triviaSection" class="hidden">
+
+      <!-- Holding screen shown during question_preview -->
+      <div id="triviaWaiting" class="hidden">
+        <div class="status-bar">Get ready...</div>
+      </div>
+
+      <!-- Live question + answer buttons + countdown -->
+      <div id="triviaQuestion" class="hidden">
+        <div id="countdown" class="round-indicator"></div>
+        <p id="questionText" class="status-bar"></p>
+        <div id="answerButtons">
+          <button class="answer-btn" data-answer="A">A</button>
+          <button class="answer-btn" data-answer="B">B</button>
+          <button class="answer-btn" data-answer="C">C</button>
+          <button class="answer-btn" data-answer="D">D</button>
+        </div>
+      </div>
+
+      <!-- Breakdown phase: waiting for reveal -->
+      <div id="triviaBreakdown" class="hidden">
+        <div class="status-bar">Waiting for results...</div>
+      </div>
+
+      <!-- Outcome: survived / eliminated / spectator / game_over -->
+      <div id="triviaOutcome" class="hidden">
+        <p id="outcomeText" class="status-bar"></p>
+        <p id="correctAnswerText"></p>
+        <p id="survivorCountText"></p>
+      </div>
+
+    </div>
   </div>
 
   <script type="module" src="/shared/player.js"></script>
+  <script type="module" src="/shared/trivia-handlers.js"></script>
 </body>
 </html>

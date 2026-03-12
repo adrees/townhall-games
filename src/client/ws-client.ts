@@ -2,15 +2,21 @@ type MessageHandler = (msg: { type: string; [key: string]: unknown }) => void;
 
 let ws: WebSocket | null = null;
 let onMessage: MessageHandler | null = null;
+let onOpenCallback: (() => void) | null = null;
 
-export function connect(handler: MessageHandler): void {
+export function connect(handler: MessageHandler, onOpen?: () => void): void {
   onMessage = handler;
+  onOpenCallback = onOpen ?? null;
   openConnection();
 }
 
 function openConnection(): void {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(protocol + '//' + location.host);
+
+  ws.onopen = function () {
+    if (onOpenCallback) onOpenCallback();
+  };
 
   ws.onmessage = function (e: MessageEvent) {
     if (onMessage) {
