@@ -34,20 +34,14 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('named routes — unified role', () => {
-  it('GET / → 200 text/html serving index.html', () => {
-    const data = Buffer.from('<html>index</html>');
-    simulateReadFile(data);
+  it('GET / → 404 (no root route)', () => {
     const req = makeReq('/');
     const res = makeRes();
 
     handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
 
-    expect(mockReadFile).toHaveBeenCalledWith(
-      expect.stringContaining('index.html'),
-      expect.any(Function),
-    );
-    expect(res.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    expect(res.end).toHaveBeenCalledWith(data);
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
   });
 
   it('GET /admin → 200 text/html serving admin/index.html', () => {
@@ -85,7 +79,7 @@ describe('named routes — unified role', () => {
   it('fs error on named route → 500', () => {
     const err = Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) as NodeJS.ErrnoException;
     simulateReadFile(null, err);
-    const req = makeReq('/');
+    const req = makeReq('/play');
     const res = makeRes();
 
     handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
@@ -106,7 +100,7 @@ describe('named routes — role restrictions', () => {
     expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
   });
 
-  it('GET / with admin role → 404 (not in admin allowlist)', () => {
+  it('GET / with admin role → 404 (no root route)', () => {
     const req = makeReq('/');
     const res = makeRes();
 
@@ -127,15 +121,14 @@ describe('named routes — role restrictions', () => {
     expect(res.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/html; charset=utf-8' });
   });
 
-  it('GET / with relay role → 200', () => {
-    const data = Buffer.from('<html>index</html>');
-    simulateReadFile(data);
+  it('GET / with relay role → 404 (no root route)', () => {
     const req = makeReq('/');
     const res = makeRes();
 
     handleStaticRequest(req, res, PUBLIC_DIR, 'relay');
 
-    expect(res.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
   });
 });
 
@@ -366,10 +359,10 @@ describe('404 fallback', () => {
     const req = { url: undefined } as http.IncomingMessage;
     const res = makeRes();
 
-    // url defaults to '/' which IS a valid unified route — just verify no crash
-    simulateReadFile(Buffer.from(''));
+    // url defaults to '/' which has no named route — should return 404 without crashing
     handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
 
-    expect(res.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
   });
 });
