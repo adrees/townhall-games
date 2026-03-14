@@ -297,6 +297,16 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
       return;
     }
 
+    // create_session always resets state so admin can start a new game from scratch
+    if (cmd?.type === 'create_session') {
+      session = null;
+      triviaGame = null;
+      adminSocket = null;
+      if (timerHandle) { clearTimeout(timerHandle); timerHandle = null; }
+      handleBingoAdminCommand(ws, raw);
+      return;
+    }
+
     // Session creation (or first admin contact for pre-injected trivia session)
     if (!session) {
       handleBingoAdminCommand(ws, raw);

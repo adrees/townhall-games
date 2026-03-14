@@ -79,12 +79,13 @@ describe('WsHandler', () => {
       expect(msg?.sessionId).toBeDefined();
     });
 
-    it('returns error if session already exists', () => {
+    it('replaces an existing session when called again', () => {
       connectAdmin();
+      const first = adminWs.messagesOfType('session_created')[0];
       adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
-      const msg = adminWs.lastMessage();
-      expect(msg?.type).toBe('error');
-      expect(msg?.message).toBe('Session already exists');
+      const second = adminWs.messagesOfType('session_created')[1];
+      expect(second?.type).toBe('session_created');
+      expect(second?.sessionId).not.toBe(first?.sessionId);
     });
 
     it('returns error if word list is too short', () => {
