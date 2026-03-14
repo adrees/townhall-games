@@ -426,6 +426,86 @@ describe('WsHandler', () => {
     });
   });
 
+  describe('spectator / broadcast screen', () => {
+    it('receives player_joined after sending register_spectator', () => {
+      connectAdmin();
+
+      const spectatorWs = new MockWs();
+      handler.handleConnection(spectatorWs as any);
+      spectatorWs.receive({ type: 'register_spectator' });
+      spectatorWs.clearSent();
+
+      handler.handleConnection(playerWs as any);
+      playerWs.receive({ type: 'join', screenName: 'Alice' });
+
+      const msg = spectatorWs.messagesOfType('player_joined')[0];
+      expect(msg).toBeDefined();
+      expect(msg?.screenName).toBe('Alice');
+      expect(msg?.playerCount).toBe(1);
+    });
+
+    it('does NOT receive player_joined without register_spectator', () => {
+      connectAdmin();
+
+      const spectatorWs = new MockWs();
+      handler.handleConnection(spectatorWs as any);
+      // deliberately skip register_spectator
+      spectatorWs.clearSent();
+
+      handler.handleConnection(playerWs as any);
+      playerWs.receive({ type: 'join', screenName: 'Alice' });
+
+      expect(spectatorWs.messagesOfType('player_joined')).toHaveLength(0);
+    });
+
+    it('receives player_left when a player disconnects', () => {
+      connectAdmin();
+
+      const spectatorWs = new MockWs();
+      handler.handleConnection(spectatorWs as any);
+      spectatorWs.receive({ type: 'register_spectator' });
+
+      handler.handleConnection(playerWs as any);
+      playerWs.receive({ type: 'join', screenName: 'Alice' });
+      spectatorWs.clearSent();
+
+      playerWs.simulateClose();
+
+      const msg = spectatorWs.messagesOfType('player_left')[0];
+      expect(msg).toBeDefined();
+      expect(msg?.screenName).toBe('Alice');
+      expect(msg?.playerCount).toBe(0);
+    });
+
+    it('receives question_live broadcast during trivia game', () => {
+      jest.useFakeTimers();
+      const game = new TriviaGame('test', [
+        { question: 'Q1', a: 'A1', b: 'B1', c: 'C1', d: 'D1', correct: 'A' },
+        { question: 'Q2', a: 'A2', b: 'B2', c: 'C2', d: 'D2', correct: 'B' },
+        { question: 'Q3', a: 'A3', b: 'B3', c: 'C3', d: 'D3', correct: 'C' },
+      ]);
+      const session = new Session('trivia', []);
+      const h = createWsHandler(game, session);
+
+      const spectatorWs = new MockWs();
+      h.handleConnection(spectatorWs as any);
+      spectatorWs.receive({ type: 'register_spectator' });
+      spectatorWs.clearSent();
+
+      h.handleConnection(adminWs as any);
+      adminWs.receive({ type: 'go_live' }); // sets adminSocket, errors (wrong state) — ok
+      adminWs.clearSent();
+
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.receive({ type: 'go_live' });
+
+      const msg = spectatorWs.messagesOfType('question_live')[0];
+      expect(msg).toBeDefined();
+      expect(msg?.text).toBe('Q1');
+      jest.useRealTimers();
+    });
+  });
+
   describe('late joiner', () => {
     it('gets a card dealt when joining an active game', () => {
       connectAdmin();

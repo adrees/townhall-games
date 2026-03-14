@@ -46,6 +46,10 @@ export interface SubmitAnswerCommand {
   answer: AnswerOption;
 }
 
+export interface RegisterSpectatorCommand {
+  type: 'register_spectator';
+}
+
 export type Command =
   | CreateSessionCommand
   | StartGameCommand
@@ -55,7 +59,8 @@ export type Command =
   | StartTriviaQuestionCommand
   | GoLiveCommand
   | AdvanceQuestionCommand
-  | SubmitAnswerCommand;
+  | SubmitAnswerCommand
+  | RegisterSpectatorCommand;
 
 // Server → Client events (Bingo)
 
@@ -237,6 +242,7 @@ const COMMAND_TYPES = new Set([
   'go_live',
   'advance_question',
   'submit_answer',
+  'register_spectator',
 ]);
 
 export function parseCommand(raw: string): Command | null {
@@ -310,6 +316,9 @@ export function parseCommand(raw: string): Command | null {
       if (!answer || !VALID_ANSWER_OPTIONS.has(answer)) return null;
       return { type: 'submit_answer', answer: answer as AnswerOption };
     }
+
+    case 'register_spectator':
+      return { type: 'register_spectator' };
 
     default:
       return null;

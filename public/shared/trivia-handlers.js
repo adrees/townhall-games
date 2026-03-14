@@ -5,6 +5,10 @@ let countdownInterval = null;
 let eliminated = false;
 
 function showTriviaOnly(sectionId) {
+    hide('waitingSection');
+    hide('playingSection');
+    hide('leaderboardSection');
+    hide('winBanner');
     hide('triviaWaiting');
     hide('triviaQuestion');
     hide('triviaBreakdown');

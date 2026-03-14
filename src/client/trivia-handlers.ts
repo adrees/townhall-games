@@ -7,6 +7,10 @@ let countdownInterval: ReturnType<typeof setInterval> | null = null;
 let eliminated = false;
 
 function showTriviaOnly(sectionId: string): void {
+  hide('waitingSection');
+  hide('playingSection');
+  hide('leaderboardSection');
+  hide('winBanner');
   hide('triviaWaiting');
   hide('triviaQuestion');
   hide('triviaBreakdown');

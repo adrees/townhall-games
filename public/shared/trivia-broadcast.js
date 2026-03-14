@@ -1,4 +1,4 @@
-import { connect } from './ws-client.js';
+import { connect, send } from './ws-client.js';
 
 // ── Query params ─────────────────────────────────────────────────────────────
 const DEBUG_MODE = new URLSearchParams(location.search).get('debug') === 'true';
@@ -224,4 +224,4 @@ function handleMessage(msg) {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 setPhase('lobby');
-connect(handleMessage);
+connect(handleMessage, () => send({ type: 'register_spectator' }));

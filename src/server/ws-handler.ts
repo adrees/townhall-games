@@ -19,6 +19,7 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
   let adminSocket: WebSocket | null = null;
   const socketToPlayer = new Map<WebSocket, PlayerInfo>();
   const playerToSocket = new Map<string, WebSocket>();
+  const spectatorSockets = new Set<WebSocket>();
   let pendingJoinSocket: WebSocket | null = null;
   let timerHandle: ReturnType<typeof setTimeout> | null = null;
 
@@ -42,6 +43,11 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
     if (adminSocket) {
       try {
         if (adminSocket.readyState === adminSocket.OPEN) adminSocket.send(data);
+      } catch { /* swallow */ }
+    }
+    for (const ws of spectatorSockets) {
+      try {
+        if (ws.readyState === ws.OPEN) ws.send(data);
       } catch { /* swallow */ }
     }
   }
@@ -285,15 +291,24 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
   // ── Message routing ──────────────────────────────────────────────────────
 
   function handleMessage(ws: WebSocket, raw: string): void {
+    const cmd = parseCommand(raw);
+    if (cmd?.type === 'register_spectator') {
+      spectatorSockets.add(ws);
+      return;
+    }
+
     // Session creation (or first admin contact for pre-injected trivia session)
     if (!session) {
       handleBingoAdminCommand(ws, raw);
       return;
     }
 
-    // For injected trivia sessions, first admin message sets adminSocket
+    // For injected trivia sessions, first non-player message sets adminSocket
     if (session.gameMode === 'trivia' && adminSocket === null) {
-      adminSocket = ws;
+      const cmd = parseCommand(raw);
+      if (cmd && cmd.type !== 'join' && cmd.type !== 'submit_answer') {
+        adminSocket = ws;
+      }
     }
 
     const isAdmin = ws === adminSocket;
@@ -322,6 +337,7 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
       socketToPlayer.delete(ws);
     }
     if (ws === adminSocket) adminSocket = null;
+    spectatorSockets.delete(ws);
   }
 
   return {
