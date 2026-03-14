@@ -8,6 +8,6 @@ services:
     plan: free
     buildCommand: npm install && npm run build
     startCommand: npm run start:relay
-    healthCheckPath: /
+    healthCheckPath: /version
     envVars:
       - fromGroup: town-hall-games
