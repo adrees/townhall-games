@@ -1,7 +1,7 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: `?debug=true` shows a collapsible live session-state panel
-When any trivia page (admin controller or broadcast screen) is loaded with `?debug=true` in the URL, the UI SHALL render a collapsible panel containing a JSON dump of the most recent WebSocket event. The panel SHALL update on every WebSocket message received. The panel SHALL be absent from the DOM when `?debug=true` is not set.
+When any page (admin controller or broadcast screen) is loaded with `?debug=true` in the URL, the UI SHALL render a collapsible panel containing a JSON dump of the most recent WebSocket event. The panel SHALL update on every WebSocket message received. The panel SHALL be absent from the DOM when `?debug=true` is not set.
 
 #### Scenario: Debug panel is present only when debug param is set
 - **WHEN** any trivia page (admin or broadcast) loads without `?debug=true`
