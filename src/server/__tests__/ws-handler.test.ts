@@ -425,6 +425,61 @@ describe('WsHandler', () => {
       playerWs.receive({ type: 'mark_word', word: 'synergy' });
       expect(playerWs.lastMessage()?.type).toBe('error');
     });
+
+    describe('player elimination', () => {
+      function setupTriviaWithPlayer(screenName: string) {
+        jest.useFakeTimers();
+        const game = new TriviaGame('test', QUESTIONS);
+        const session = new Session('trivia', []);
+        const h = createWsHandler(game, session);
+
+        h.handleConnection(adminWs as any);
+        adminWs.receive({ type: 'go_live' }); // sets adminSocket, errors (wrong state) — ok
+        adminWs.clearSent();
+
+        h.handleConnection(playerWs as any);
+        playerWs.receive({ type: 'join', screenName });
+        playerWs.clearSent();
+
+        adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+        adminWs.receive({ type: 'go_live' });
+        adminWs.clearSent();
+        playerWs.clearSent();
+
+        return { h, game };
+      }
+
+      it('player who does not answer receives you_are_eliminated after timer expires', () => {
+        setupTriviaWithPlayer('Alice');
+
+        jest.advanceTimersByTime(10000 + 2500);
+
+        expect(playerWs.messagesOfType('you_are_eliminated')).toHaveLength(1);
+        jest.useRealTimers();
+      });
+
+      it('player who answers correctly receives you_survived after timer expires', () => {
+        setupTriviaWithPlayer('Alice');
+
+        playerWs.receive({ type: 'submit_answer', answer: 'A' }); // correct answer for Q1
+        jest.advanceTimersByTime(10000 + 2500);
+
+        expect(playerWs.messagesOfType('you_survived')).toHaveLength(1);
+        expect(playerWs.messagesOfType('you_are_eliminated')).toHaveLength(0);
+        jest.useRealTimers();
+      });
+
+      it('player who answers incorrectly receives you_are_eliminated after timer expires', () => {
+        setupTriviaWithPlayer('Alice');
+
+        playerWs.receive({ type: 'submit_answer', answer: 'B' }); // wrong answer for Q1 (correct is A)
+        jest.advanceTimersByTime(10000 + 2500);
+
+        expect(playerWs.messagesOfType('you_are_eliminated')).toHaveLength(1);
+        expect(playerWs.messagesOfType('you_survived')).toHaveLength(0);
+        jest.useRealTimers();
+      });
+    });
   });
 
   describe('spectator / broadcast screen', () => {

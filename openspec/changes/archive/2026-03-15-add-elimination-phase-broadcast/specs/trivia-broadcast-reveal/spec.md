@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Broadcast screen highlights the correct answer and triggers the elimination phase
 When an `answer_revealed` event is received, the broadcast screen SHALL highlight the correct answer bar and transition to the `elimination` phase where eliminated player names animate off the word cloud. Surviving player names SHALL remain visible.

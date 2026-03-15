@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Broadcast screen regroups surviving names into a resized word cloud after each question
 When a `survivors_regrouped` event is received (and no elimination animation is in progress), the broadcast screen SHALL transition to the survivor phase, reposition remaining names within the word cloud, and scale their font size larger to fill the available space. The survivor count SHALL be shown prominently. The screen SHALL hold this state until the presenter advances to the next question.

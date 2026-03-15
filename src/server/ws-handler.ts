@@ -194,6 +194,11 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
           break;
         }
         case 'go_live': {
+          // First question only: register all currently joined players as survivors
+          if (triviaGame.getSurvivors().length === 0) {
+            const playerIds = [...socketToPlayer.values()].map(info => info.playerId);
+            triviaGame.registerPlayers(playerIds);
+          }
           triviaGame.goLive();
           const q = triviaGame.getCurrentQuestion()!;
           broadcast({ type: 'question_live', text: q.question, options: [q.a, q.b, q.c, q.d], timeLimit: triviaGame.questionTimeLimitMs / 1000 });
