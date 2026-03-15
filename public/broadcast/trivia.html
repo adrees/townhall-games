@@ -87,24 +87,41 @@
 
     #answerLabels {
       display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 700px;
       margin-bottom: 30px;
     }
 
     .answer-label {
-      width: 80px;
-      height: 80px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #e8f4fd;
+      border: 3px solid #3498db;
+      border-radius: 10px;
+      padding: 12px 20px;
+    }
+
+    .answer-letter {
+      width: 48px;
+      height: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 50%;
-      background: #e8f4fd;
-      border: 3px solid #3498db;
-      font-size: 32px;
+      background: #3498db;
+      font-size: 24px;
       font-weight: bold;
-      color: #2980b9;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .answer-text {
+      font-size: clamp(18px, 2.5vw, 28px);
+      font-weight: bold;
+      color: #2c3e50;
     }
 
     #countdownRing { transform: rotate(-90deg); }
@@ -238,10 +255,10 @@
   <div id="questionSection" class="phase-root">
     <div id="questionText"></div>
     <div id="answerLabels">
-      <div class="answer-label">A</div>
-      <div class="answer-label">B</div>
-      <div class="answer-label">C</div>
-      <div class="answer-label">D</div>
+      <div class="answer-label"><span class="answer-letter">A</span><span class="answer-text" id="answerTextA"></span></div>
+      <div class="answer-label"><span class="answer-letter">B</span><span class="answer-text" id="answerTextB"></span></div>
+      <div class="answer-label"><span class="answer-letter">C</span><span class="answer-text" id="answerTextC"></span></div>
+      <div class="answer-label"><span class="answer-letter">D</span><span class="answer-text" id="answerTextD"></span></div>
     </div>
     <svg id="countdownRing" width="120" height="120" viewBox="0 0 120 120">
       <circle id="ringTrack" cx="60" cy="60" r="52"/>

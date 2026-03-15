@@ -41,6 +41,8 @@ const ELIMINATION_DURATION_MS = 2000;
 let eliminationAnimating = false;
 /** @type {object|null} */
 let pendingSurvivors = null;
+/** @type {object|null} */
+let pendingGameOver = null;
 
 // ── SVG ring setup ────────────────────────────────────────────────────────────
 const RING_RADIUS = 52;
@@ -144,7 +146,11 @@ function onPlayerLeft(msg) {
 function onQuestionLive(msg) {
     setPhase('question');
     document.getElementById('questionText').textContent = msg.text;
-    // Answer labels are static A/B/C/D letters already in HTML
+    const [a, b, c, d] = msg.options;
+    document.getElementById('answerTextA').textContent = a;
+    document.getElementById('answerTextB').textContent = b;
+    document.getElementById('answerTextC').textContent = c;
+    document.getElementById('answerTextD').textContent = d;
     startCountdown(msg.timeLimit);
 }
 
@@ -190,6 +196,10 @@ function onAnswerRevealed(msg) {
             const buffered = pendingSurvivors;
             pendingSurvivors = null;
             onSurvivorsRegrouped(buffered);
+        } else if (pendingGameOver !== null) {
+            const buffered = pendingGameOver;
+            pendingGameOver = null;
+            onGameOver(buffered);
         }
     }, ELIMINATION_DURATION_MS);
 }
@@ -217,6 +227,10 @@ function onSurvivorsRegrouped(msg) {
 }
 
 function onGameOver(msg) {
+    if (eliminationAnimating) {
+        pendingGameOver = msg;
+        return;
+    }
     setPhase('winner');
     if (msg.winners.length === 0) {
         winnerLabel.textContent = '';
