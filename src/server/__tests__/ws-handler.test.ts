@@ -117,6 +117,32 @@ describe('WsHandler', () => {
         expect(adminWs.lastMessage()?.type).toBe('session_created');
         // Speed mode yields a 3s timer — verified indirectly by session creation success
       });
+
+      it('creating ws becomes admin socket and receives player_joined broadcasts', () => {
+        handler.handleConnection(adminWs as any);
+        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
+        adminWs.clearSent();
+
+        handler.handleConnection(playerWs as any);
+        playerWs.receive({ type: 'join', screenName: 'Alice' });
+
+        const adminMessages = adminWs.messagesOfType('player_joined');
+        expect(adminMessages).toHaveLength(1);
+        expect(adminMessages[0].screenName).toBe('Alice');
+      });
+
+      it('admin can send start_trivia_question after trivia create_session', () => {
+        handler.handleConnection(adminWs as any);
+        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
+        adminWs.clearSent();
+
+        adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+
+        const preview = adminWs.messagesOfType('question_preview');
+        expect(preview).toHaveLength(1);
+        expect(preview[0].questionIndex).toBe(0);
+        expect(preview[0].text).toBe('Q1?');
+      });
     });
   });
 
