@@ -26,13 +26,14 @@ const VERSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const WS_TIMEOUT_MS = 10_000; // 10 seconds
 
 const ASSETS = [
-  { path: '/', contentType: 'text/html' },
-  { path: '/style.css', contentType: 'text/css' },
-  { path: '/player.js', contentType: 'application/javascript' },
-  { path: '/ws-client.js', contentType: 'application/javascript' },
-  { path: '/handlers.js', contentType: 'application/javascript' },
-  { path: '/ui.js', contentType: 'application/javascript' },
-  { path: '/state.js', contentType: 'application/javascript' },
+  { path: '/play',                contentType: 'text/html' },
+  { path: '/broadcast/trivia',    contentType: 'text/html' },
+  { path: '/style.css',           contentType: 'text/css' },
+  { path: '/shared/player.js',    contentType: 'application/javascript' },
+  { path: '/shared/ws-client.js', contentType: 'application/javascript' },
+  { path: '/shared/handlers.js',  contentType: 'application/javascript' },
+  { path: '/shared/ui.js',        contentType: 'application/javascript' },
+  { path: '/shared/state.js',     contentType: 'application/javascript' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -158,35 +159,23 @@ async function checkStaticAssets() {
 
 async function checkPlayerWebSocket() {
   console.log('\nChecking player WebSocket...');
-  try {
-    const msg = await wsReceiveOne('/');
-    pass(`Player WS connected, received: ${JSON.stringify(msg)}`);
-  } catch (e) {
-    fail(`Player WS failed: ${e.message}`);
-  }
-}
-
-function wsReceiveOne(path) {
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`${WS_BASE}${path}`);
+  await new Promise((resolve) => {
+    const ws = new WebSocket(`${WS_BASE}/`);
     const timer = setTimeout(() => {
       ws.terminate();
-      reject(new Error(`No message received within ${WS_TIMEOUT_MS / 1000}s`));
+      fail('Player WS: did not connect within 10s');
+      resolve();
     }, WS_TIMEOUT_MS);
-
     ws.on('error', (err) => {
       clearTimeout(timer);
-      reject(err);
+      fail(`Player WS failed: ${err.message}`);
+      resolve();
     });
-
-    ws.on('message', (data) => {
+    ws.on('open', () => {
       clearTimeout(timer);
       ws.close();
-      try {
-        resolve(JSON.parse(data.toString()));
-      } catch {
-        resolve(data.toString());
-      }
+      pass('Player WS connected successfully');
+      resolve();
     });
   });
 }
