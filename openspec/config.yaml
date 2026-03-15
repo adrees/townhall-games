@@ -1,20 +1,17 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack: TypeScript 5.9 (strict), Node.js 18, ws (WebSockets), Jest 30, Playwright
+  Domain: real-time multiplayer game platform for corporate town halls
+  Two game modes: Buzzword Bingo and Teams Trivia (elimination quiz)
+  Architecture: cloud relay (Render.com) + local admin server + browser players
+  Pure core layer (src/core/) has zero I/O — all side effects in src/server/ and src/client/
+  Protocol: JSON discriminated unions (type/envelope field); see src/server/protocol.ts
+  All changes go through openspec; see CLAUDE.md for full developer guide
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  tasks:
+    - Include a task to update CLAUDE.md if directory structure, protocol messages, URL routes, or dev commands changed
+  proposal:
+    - Keep proposals under 500 words
+    - Include a "Non-goals" section

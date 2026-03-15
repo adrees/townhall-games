@@ -2,11 +2,18 @@
 
 This file describes the codebase structure, development workflows, and conventions for AI assistants working on this repository.
 
+**Keep this file up to date.** When you change the directory structure, protocol messages, URL routes, or dev commands, update the relevant section here. Every `openspec/tasks.md` should include a task to update CLAUDE.md if structural changes are involved.
+
 ---
 
 ## Project Overview
 
-**townhall-games** is a real-time multiplayer Buzzword Bingo game designed for town hall meetings. Players join a session, receive unique 5x5 bingo cards, and mark off words as they hear them. The first player to complete a winning pattern wins the round. Scores accumulate across multiple rounds.
+**townhall-games** is a real-time multiplayer game platform for town hall meetings. It supports two game modes:
+
+- **Buzzword Bingo** — Players get unique 5×5 cards and mark off words as they hear them. First to complete a winning pattern wins the round.
+- **Teams Trivia** — Elimination trivia with a 10s countdown per question. Wrong answers (or no answer) eliminate the player. Last survivors win.
+
+The admin selects the game mode when creating a session. All shared infrastructure (relay, session management, WebSocket server, QR join flow) is mode-agnostic.
 
 ---
 
@@ -15,7 +22,7 @@ This file describes the codebase structure, development workflows, and conventio
 The system can operate in two modes:
 
 ### Unified Local Mode
-A single Node.js server (`src/server/index.ts`) serves both player and admin interfaces, handling all WebSocket connections locally.
+A single Node.js server (`src/server/index.ts`) serves both player and admin interfaces.
 
 ```
 Browser Players ──────────┐
@@ -32,47 +39,100 @@ Player Browsers ──► Cloud Relay (port 10000) ◄──► Admin Server (po
                                                    + AdminRelayClient
 ```
 
+The relay requires no changes when adding new game modes — it is transport-only.
+
 ---
 
 ## Directory Structure
 
 ```
 townhall-games/
-├── .claude/
-│   └── .bingo-spec.md        # Game specification (50+ test cases, mechanics)
+├── .claude/                         # AI assistant context
 ├── .github/workflows/
-│   └── test.yml              # CI: runs npm test on push/PR to main
-├── src/
-│   ├── core/                 # Game logic (no I/O dependencies)
-│   │   ├── __tests__/
-│   │   ├── bingo-card.ts     # 5x5 card generation, marking, win detection
-│   │   ├── bingo-game.ts     # Multi-round game orchestration
-│   │   ├── session.ts        # Player roster, scoring, event emission
-│   │   └── types.ts          # Shared TypeScript types
-│   ├── relay/                # Cloud WebSocket relay/multiplexer
-│   │   ├── __tests__/
-│   │   ├── relay-main.ts     # Entry point (port 10000)
-│   │   ├── relay-handler.ts  # Admin/player connection routing
-│   │   └── relay-protocol.ts # Relay envelope message types
-│   ├── server/               # Game and admin servers
-│   │   ├── __tests__/
-│   │   ├── index.ts          # Unified server entry point
-│   │   ├── admin-main.ts     # Admin server entry point
-│   │   ├── admin-ws-handler.ts   # Admin WebSocket handler
-│   │   ├── admin-relay-client.ts # Admin→relay connection
-│   │   ├── ws-handler.ts     # Player WebSocket handler (unified mode)
-│   │   ├── http-server.ts    # Static file serving
-│   │   └── protocol.ts       # Client↔server message types
-│   ├── demo.ts               # Local demo harness
-│   └── demo-session.ts       # Demo session helper
+│   ├── test.yml                     # CI: npm test on push/PR to main
+│   └── e2e.yml                      # E2E smoke test after CI passes
+├── e2e/                             # Playwright end-to-end tests
+│   ├── broadcast-lobby.spec.ts
+│   └── fixtures.ts
+├── openspec/                        # Change management (see openspec Workflow below)
+│   ├── config.yaml
+│   ├── specs/                       # Current canonical specs per feature
+│   └── changes/                     # Per-change proposals, designs, tasks (archive/)
+├── product/
+│   ├── teams-trivia-spec.md         # Full trivia technical spec — authoritative reference
+│   ├── backlog.md                   # Product ideas/backlog
+│   └── words.txt                    # Bingo word list
 ├── public/
-│   ├── index.html            # Player UI
-│   ├── admin.html            # Admin UI
-│   └── style.css             # Shared styles
+│   ├── admin/
+│   │   ├── index.html               # Game mode selector
+│   │   ├── bingo.html               # Bingo setup + controller
+│   │   └── trivia.html              # Trivia setup (CSV import) + controller
+│   ├── broadcast/
+│   │   └── trivia.html              # Trivia broadcast screen
+│   ├── play/
+│   │   └── index.html               # Unified player view (mode-aware)
+│   ├── shared/                      # Compiled JS modules served statically
+│   │   ├── state.js
+│   │   ├── ui.js
+│   │   ├── handlers.js
+│   │   ├── ws-client.js
+│   │   ├── player.js
+│   │   ├── csv-parser.js
+│   │   ├── trivia-handlers.js
+│   │   ├── trivia-admin.js
+│   │   └── trivia-broadcast.js
+│   └── style.css
+├── scripts/
+│   └── smoke-test.js                # Post-deploy smoke test (hits /version endpoint)
+├── src/
+│   ├── client/                      # TypeScript source for public/shared/ modules
+│   │   ├── __tests__/
+│   │   ├── state.ts
+│   │   ├── ui.ts
+│   │   ├── handlers.ts
+│   │   ├── ws-client.ts
+│   │   ├── player.ts
+│   │   └── trivia-handlers.ts
+│   ├── core/                        # Pure game logic — no I/O dependencies
+│   │   ├── __tests__/
+│   │   ├── games/
+│   │   │   ├── bingo/
+│   │   │   │   ├── bingo-card.ts    # 5×5 card generation, marking, win detection
+│   │   │   │   └── bingo-game.ts    # Multi-round game orchestration
+│   │   │   └── trivia/
+│   │   │       ├── trivia-game.ts   # TriviaGame state machine (6 phases)
+│   │   │       ├── trivia-round.ts  # Per-question answer collection + elimination
+│   │   │       ├── csv-parser.ts    # CSV question import + validation
+│   │   │       └── index.ts         # Re-exports
+│   │   ├── session.ts               # Player roster, scoring, game-mode routing
+│   │   └── types.ts                 # All shared TypeScript types
+│   ├── relay/                       # Cloud WebSocket relay/multiplexer
+│   │   ├── __tests__/
+│   │   ├── relay-main.ts            # Entry point (port 10000)
+│   │   ├── relay-handler.ts         # Admin/player connection routing
+│   │   ├── relay-protocol.ts        # Relay envelope message types
+│   │   └── version-handler.ts       # GET /version endpoint (used by smoke test)
+│   ├── server/                      # Game and admin servers
+│   │   ├── __tests__/
+│   │   ├── index.ts                 # Unified server entry point
+│   │   ├── admin-main.ts            # Admin server entry point
+│   │   ├── admin-ws-handler.ts      # Admin WebSocket handler
+│   │   ├── admin-relay-client.ts    # Admin→relay connection
+│   │   ├── ws-handler.ts            # Player WebSocket handler
+│   │   ├── http-server.ts           # Static file serving
+│   │   ├── routes.ts                # URL routing (ROUTE_MAP + static asset fallback)
+│   │   └── protocol.ts              # All client↔server message types
+│   ├── fixtures/
+│   │   ├── trivia-questions.csv     # 7 sample questions for demo/test
+│   │   └── bingo-words.ts           # Default bingo word list
+│   ├── demo.ts                      # Local demo harness
+│   └── demo-session.ts              # Demo session helper
 ├── package.json
-├── tsconfig.json
+├── tsconfig.json                    # Server TypeScript config
+├── tsconfig.client.json             # Client TypeScript config (outputs to public/shared/)
 ├── jest.config.js
-└── render.yaml               # Render.com deployment config
+├── playwright.config.ts
+└── render.yaml                      # Render.com deployment config
 ```
 
 ---
@@ -85,8 +145,9 @@ townhall-games/
 | Runtime | Node.js 18+ |
 | WebSockets | `ws` 8.19.0 |
 | Environment | `dotenv` 17.3.1 |
-| Testing | Jest 30 + ts-jest 29 |
-| Build | `tsc` → `dist/` |
+| Unit testing | Jest 30 + ts-jest 29 |
+| E2E testing | Playwright 1.58 |
+| Build | `tsc` → `dist/` (server), `tsc -p tsconfig.client.json` → `public/shared/` (client) |
 | Deployment | Render.com (relay), local (admin/server) |
 | CI | GitHub Actions |
 
@@ -95,17 +156,28 @@ townhall-games/
 ## Development Commands
 
 ```bash
-npm test                 # Run all Jest tests
+npm test                 # Run all Jest unit tests
 npm run test:coverage    # Tests + coverage report
-npm run build            # Compile TypeScript → dist/
+npm run build            # Compile server TypeScript → dist/
+npm run build:client     # Compile client TypeScript → public/shared/
 npm start                # Unified server (dist/server/index.js)
 npm run start:admin      # Admin server (dist/server/admin-main.js)
 npm run start:relay      # Relay server (dist/relay/relay-main.js)
 npm run dev              # Compile + run relay + admin (uses .env)
 npm run demo             # Compile + run demo harness
+npm run smoke            # Post-deploy smoke test against production relay
+npm run smoke:local      # Smoke test against localhost:10000
 ```
 
 `npm run dev` requires a `.env` file (not committed) with relay variables set.
+
+**4-tab local integration test** (no setup required):
+```
+Tab 1:  /admin/trivia?demo=true&debug=true
+Tab 2:  /broadcast/trivia?session=demo
+Tab 3:  /play?session=demo&name=Alice
+Tab 4:  /play?session=demo&name=Bob
+```
 
 ---
 
@@ -119,80 +191,137 @@ npm run demo             # Compile + run demo harness
 
 ---
 
-## Core Game Logic (`src/core/`)
+## URL Routes
 
-This layer has **no I/O dependencies** — it is pure game logic. All classes are instantiated by the server layer.
+| URL | Purpose |
+|---|---|
+| `/admin` | Game mode selector |
+| `/admin/bingo` | Bingo setup + live controller |
+| `/admin/trivia` | Trivia setup (CSV import) + live controller |
+| `/play` | Player join — mode-agnostic |
+| `/broadcast/trivia` | Trivia broadcast screen |
+
+### Query Parameters
+
+| Parameter | Effect |
+|---|---|
+| `?demo=true` | Pre-loads fixture data (skips CSV import / word entry) |
+| `?debug=true` | Shows collapsible session state JSON panel |
+| `?speed=true` | Reduces 10s timer to 3s for rapid testing |
+| `?session=demo&name=Alice` | Auto-joins on `/play` — skips name entry form |
+
+---
+
+## Game Modes
+
+### Bingo
+
+5×5 card, FREE center square. Admin provides a word list (min 24, recommended 40–60). Players mark words as the admin calls them. Win by completing any row, column, diagonal, or four corners + center. Scores accumulate across rounds (100 points per win).
+
+Key files: `src/core/games/bingo/bingo-card.ts`, `src/core/games/bingo/bingo-game.ts`
+
+### Trivia
+
+Elimination quiz. Admin imports questions via CSV. Each question has a 10s countdown; wrong or no answer eliminates the player. Surviving players advance. Last survivor(s) win.
+
+State machine: `waiting → question_preview → question_live → breakdown → answer_revealed → survivors → game_over`
+
+Full specification: **`product/teams-trivia-spec.md`**
+
+Key files: `src/core/games/trivia/trivia-game.ts`, `src/core/games/trivia/trivia-round.ts`, `src/core/games/trivia/csv-parser.ts`
+
+---
+
+## Core Architecture (`src/core/`)
+
+No I/O dependencies. All classes are instantiated by the server layer.
 
 ### `types.ts`
-All shared types. Read this first when making changes. Key types:
-- `WinPattern` — discriminated union: `horizontal | vertical | diagonal | corners`
-- `MarkResult` — result returned when a player marks a word
+All shared types. Read this first. Key types:
+- `WinPattern` — `horizontal | vertical | diagonal | corners`
+- `MarkResult` — returned when a bingo player marks a word
+- `TriviaState` — `waiting | question_preview | question_live | breakdown | answer_revealed | survivors | game_over`
+- `TriviaQuestion`, `AnswerOption`, `AnswerCounts`, `RoundResult`, `TriviaWinner`
 - `Player`, `PlayerScore`, `Winner`
 - Event types: `GameStartedEvent`, `PlayerWonEvent`, `NewRoundStartedEvent`, `PlayerJoinedEvent`, `PlayerLeftEvent`
 
-### `BingoCard` (`bingo-card.ts`)
-Represents a single player's 5x5 card.
-- **Center `[2][2]`** is always `"FREE"` and pre-marked.
-- `BingoCard.generate(wordList, playerId)` — static factory, shuffles words randomly.
-- `markWord(word)` — case-insensitive match.
-- `hasWon()` / `getWinningPattern()` — checks all 5 win patterns.
-
-**Win patterns:**
-1. Any complete row (5 patterns)
-2. Any complete column (5 patterns)
-3. Main diagonal (top-left → bottom-right)
-4. Anti-diagonal (top-right → bottom-left)
-5. Four corners + center
-
-### `BingoGame` (`bingo-game.ts`)
-Orchestrates game rounds.
-- State machine: `'waiting' → 'active' → 'finished'` (finished is terminal after a round with a winner).
-- `generateCardForPlayer(playerId)` — creates and stores a unique card.
-- `markWord(playerId, word)` — returns `MarkResult`; sets winner if bingo detected.
-- `startNewRound()` — increments round number, regenerates all player cards, resets winner state.
-
 ### `Session` (`session.ts`)
-High-level manager — the main interface used by server handlers.
-- Manages player roster (`addPlayer`, `removePlayer`).
-- Delegates to `BingoGame` for game operations.
-- Tracks cumulative scores across rounds (`totalPoints`, `roundsWon`).
-- Observer pattern: `addEventListener(listener)` for game lifecycle events.
-- Late joiners: if game is active, `addPlayer` auto-generates a card.
+High-level manager. Holds `gameMode: 'bingo' | 'trivia'` and delegates to the appropriate game class. Manages player roster, cumulative scores, and event listeners.
+
+### `BingoCard` / `BingoGame`
+See `src/core/games/bingo/`. Card center `[2][2]` is always `"FREE"` and pre-marked. `BingoCard.generate(wordList, playerId)` is the static factory.
+
+### `TriviaGame` / `TriviaRound` / `CsvParser`
+See `src/core/games/trivia/`. `TriviaGame` owns the state machine. `TriviaRound` tracks per-question answers and elimination. `CsvParser` validates and parses CSV uploads (min 3, max 15 questions).
 
 ---
 
 ## WebSocket Protocol (`src/server/protocol.ts`)
 
-All messages are JSON. See the file for the full discriminated union types.
+All messages are JSON. The file defines discriminated union types for all commands and events.
 
-### Client → Server
+### Client → Server (commands)
+
 ```json
-{ "type": "create_session", "words": ["word1", "word2"] }
+// Bingo
+{ "type": "create_session", "gameMode": "bingo", "words": ["word1", ...] }
+{ "type": "create_session", "gameMode": "trivia", "questions": [...], "speed": false }
 { "type": "start_game" }
 { "type": "start_new_round" }
 { "type": "join", "screenName": "Alice" }
 { "type": "mark_word", "word": "synergy" }
+
+// Trivia — admin
+{ "type": "start_trivia_question", "questionIndex": 0 }
+{ "type": "go_live" }
+{ "type": "advance_question" }
+
+// Trivia — player
+{ "type": "submit_answer", "answer": "B" }
+{ "type": "register_spectator" }
 ```
 
-### Server → Client
+### Server → Client (events)
+
 ```json
+// Shared
 { "type": "session_created", "sessionId": "..." }
 { "type": "joined", "playerId": "...", "screenName": "Alice", "gameStatus": "waiting", "round": 1 }
-{ "type": "card_dealt", "roundNumber": 1, "grid": [["word",...]], "marked": [[false,...]] }
+{ "type": "player_joined", "playerId": "...", "screenName": "Carol", "playerCount": 3 }
+{ "type": "player_left", "playerId": "...", "screenName": "Dave", "playerCount": 2 }
+{ "type": "game_status", "status": "active", "round": 2 }
+{ "type": "error", "message": "..." }
+
+// Bingo
+{ "type": "card_dealt", "roundNumber": 1, "grid": [["word", ...]], "marked": [[false, ...]] }
 { "type": "mark_result", "success": true, "word": "synergy", "bingo": false, "roundOver": false }
 { "type": "player_won", "winnerName": "Bob", "pattern": {...}, "roundNumber": 1 }
 { "type": "leaderboard", "entries": [{ "playerId": "...", "screenName": "Alice", "totalPoints": 100, "roundsWon": 1 }] }
-{ "type": "game_status", "status": "active", "round": 2 }
-{ "type": "player_joined", "playerId": "...", "screenName": "Carol", "playerCount": 3 }
-{ "type": "player_left", "playerId": "...", "screenName": "Dave", "playerCount": 2 }
-{ "type": "error", "message": "..." }
+
+// Trivia — broadcast to all
+{ "type": "question_preview", "questionIndex": 0, "text": "..." }
+{ "type": "question_live", "text": "...", "options": ["A","B","C","D"], "timeLimit": 10 }
+{ "type": "timer_expired" }
+{ "type": "answer_breakdown", "counts": {"A":4,"B":12,"C":2,"D":1}, "totalAnswered": 19, "totalPlayers": 20 }
+{ "type": "answer_revealed", "correct": "B", "eliminated": ["id1"], "survivors": ["id2"] }
+{ "type": "survivors_regrouped", "survivorCount": 12, "survivorNames": ["Alice", ...] }
+{ "type": "game_over", "winners": ["Alice", "Bob"] }
+
+// Trivia — individual player
+{ "type": "answer_accepted" }
+{ "type": "you_survived", "survivorCount": 12 }
+{ "type": "you_are_eliminated", "correctAnswer": "B", "yourAnswer": "A" }
+
+// Trivia — admin only
+{ "type": "live_answer_stats", "counts": {"A":1,"B":2,"C":0,"D":0}, "answered": 3, "remaining": 17 }
+{ "type": "question_result", "correct": "B", "eliminated": [...], "survivors": [...] }
 ```
 
 ---
 
 ## Relay Protocol (`src/relay/relay-protocol.ts`)
 
-Used only between the admin server and the cloud relay. Admin authenticates with `RELAY_SECRET`, then the relay forwards player messages upstream and admin messages downstream.
+Transport-only — no game-mode awareness. Admin authenticates with `RELAY_SECRET`.
 
 ```json
 // Admin → Relay
@@ -212,63 +341,102 @@ Used only between the admin server and the cloud relay. Admin authenticates with
 
 ## Testing
 
-Tests live in `__tests__/` subdirectories next to the source they test.
+### Unit tests (`npm test`)
 
-```bash
-src/core/__tests__/bingo-card.test.ts       # ~610 lines
-src/core/__tests__/bingo-game.test.ts       # ~530 lines
-src/core/__tests__/session.test.ts          # ~555 lines
+Tests live in `__tests__/` subdirectories next to the source they test. Always run before committing.
+
+```
+src/core/__tests__/bingo-card.test.ts
+src/core/__tests__/bingo-game.test.ts
+src/core/__tests__/session.test.ts
+src/core/__tests__/trivia-game.test.ts
+src/core/__tests__/trivia-round.test.ts
+src/core/__tests__/csv-parser.test.ts
+src/client/__tests__/state.test.ts
+src/client/__tests__/ui.test.ts
+src/client/__tests__/handlers.test.ts
+src/client/__tests__/ws-client.test.ts
+src/client/__tests__/trivia-handlers.test.ts
 src/relay/__tests__/relay-handler.test.ts
 src/relay/__tests__/relay-protocol.test.ts
+src/relay/__tests__/version-handler.test.ts
 src/server/__tests__/ws-handler.test.ts
 src/server/__tests__/admin-ws-handler.test.ts
 src/server/__tests__/admin-relay-client.test.ts
 src/server/__tests__/protocol.test.ts
+src/server/__tests__/http-server.test.ts
 ```
 
-**Always run `npm test` before committing.** The CI pipeline runs `npm test` on every push and PR to `main`.
+When adding new mechanics or protocol messages, add tests in the corresponding `__tests__` file. Follow the existing `describe/it` structure.
 
-When adding new game mechanics or protocol messages, add tests in the corresponding `__tests__` file. Follow the existing `describe/it` block structure in each file.
+### E2E tests (`npx playwright test`)
+
+Playwright tests in `e2e/`. Run locally against a running server. Not part of `npm test` — run separately or via CI.
+
+### Smoke test (`npm run smoke`)
+
+`scripts/smoke-test.js` hits the production relay's `/version` endpoint to verify the deployed SHA matches the expected commit. Runs automatically in CI after tests pass on `main`.
+
+---
+
+## openspec Workflow
+
+`openspec/` is a structured change-management system. Each significant change gets its own directory under `openspec/changes/` containing:
+
+- `proposal.md` — the what and why
+- `design.md` — technical design decisions
+- `specs/` — per-feature spec files
+- `tasks.md` — implementation checklist
+
+When a change is merged, its directory moves to `openspec/changes/archive/` and the canonical specs are promoted to `openspec/specs/`.
+
+**When creating an openspec change, always include this task in `tasks.md`:**
+```markdown
+- [ ] Update CLAUDE.md if directory structure, protocol messages, URL routes, or dev commands changed
+```
+
+---
+
+## Coding Conventions
+
+- **TypeScript strict mode** — no `any`, no implicit returns, exhaustive union handling
+- **Discriminated unions** — all protocol messages and game types use a `type` or `envelope` field as discriminant
+- **Factory methods over constructors** — `BingoCard.generate()`, `createWsHandler()`, etc.
+- **Pure core layer** — `src/core/` has zero I/O dependencies; all side effects live in `src/server/` and `src/client/`
+- **State machine enforcement** — actions on wrong states are no-ops or return errors; never silently corrupt state
+- **Observer pattern** — `Session.addEventListener()` is the hook for server handlers; don't call server code from core
+- **gameMode branching** — handlers branch on `session.gameMode` at the top level; avoid scattered `if trivia` checks deep in shared logic
+- **No `console.log` in tests** — use `jest.spyOn` to suppress or assert on output
 
 ---
 
 ## Key Design Patterns
 
-- **Factory methods**: `BingoCard.generate()`, `createWsHandler()`, `createAdminWsHandler()` — prefer these over `new`.
-- **Observer / event listener**: `Session.addEventListener()` — server handlers subscribe to game events here.
-- **Discriminated unions**: All protocol messages and game types use `type` or `envelope` discriminant fields for safe exhaustive parsing.
 - **Transport abstraction**: `AdminWsHandler` uses a `RelayTransport` interface so it works identically whether connected locally or via relay.
-- **State machine**: `BingoGame.status` transitions are strictly enforced; actions on wrong states are no-ops or errors.
+- **Client module separation**: `src/client/` compiles to `public/shared/` via `tsconfig.client.json`. Each module is independently testable with jest-environment-jsdom.
+- **Demo mode**: `?demo=true` loads fixtures from `src/fixtures/` so a full game can be run in 4 browser tabs with no manual setup.
 
 ---
 
 ## Adding New Features — Typical Workflow
 
-1. **Update types** in `src/core/types.ts` if new data shapes are needed.
-2. **Update core logic** in `src/core/` (`BingoCard`, `BingoGame`, `Session`).
-3. **Update protocol** in `src/server/protocol.ts` if new client↔server messages are needed.
-4. **Update handlers** in `src/server/ws-handler.ts` and/or `src/server/admin-ws-handler.ts`.
-5. **Update relay protocol** in `src/relay/relay-protocol.ts` if relay envelope changes are needed.
-6. **Add/update tests** in the relevant `__tests__` directory.
-7. **Run `npm test`** — all tests must pass.
-8. **Run `npm run build`** — TypeScript must compile cleanly.
-9. Update `public/index.html` or `public/admin.html` if the frontend needs changes.
+1. Create an openspec change directory if the feature is significant
+2. **Update `src/core/types.ts`** if new data shapes are needed
+3. **Update core logic** in `src/core/games/` (new game) or existing game files
+4. **Update `src/server/protocol.ts`** if new client↔server messages are needed
+5. **Update handlers** in `src/server/ws-handler.ts` and/or `src/server/admin-ws-handler.ts`
+6. **Update relay protocol** in `src/relay/relay-protocol.ts` only if relay envelope changes are needed (rare)
+7. **Update `src/client/`** if the player or admin UI needs new logic
+8. **Add/update tests** in all relevant `__tests__` directories
+9. **Run `npm test`** — all tests must pass
+10. **Run `npm run build && npm run build:client`** — both must compile cleanly
+11. Update `public/` HTML files if the frontend needs changes
+12. **Update this file (CLAUDE.md)** if you changed directory structure, protocol, URL routes, or dev commands
 
 ---
 
 ## CI/CD
 
-- **CI**: GitHub Actions (`.github/workflows/test.yml`) runs `npm ci && npm test` on push/PR to `main`. Node 18, Ubuntu.
-- **Deployment**: Render.com (`render.yaml`) deploys the relay server (`npm run start:relay`), port 10000, Frankfurt region. Build: `npm install && npm run build`. Secrets managed via Render environment group `town-hall-games`.
-
----
-
-## Game Specification
-
-See `.claude/.bingo-spec.md` for the full game specification, including:
-- Detailed card generation rules
-- All win pattern definitions with grid examples
-- Scoring rules (100 points per round win)
-- Multi-round flow
-- 50+ test case descriptions
-- Implementation order recommendations
+- **CI** (`test.yml`): GitHub Actions runs `npm ci && npm test` on every push/PR to `main`. Node 18, Ubuntu.
+- **E2E** (`e2e.yml`): Playwright smoke test runs after CI passes on `main`. Hits `https://townhall-games.onrender.com/version` and checks the deployed SHA.
+- **Deployment**: Render.com deploys the relay server (`npm run start:relay`), port 10000, Frankfurt. Build: `npm install && npm run build`. Secrets via Render environment group `town-hall-games`.
