@@ -1,4 +1,4 @@
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Broadcast screen shows answer distribution bars during the breakdown phase
 When an `answer_breakdown` event is received, the broadcast screen SHALL display the current question text above four proportional bars (A, B, C, D) showing how many players chose each option. The correct answer SHALL NOT be revealed during this phase. The bars SHALL animate to their target width.

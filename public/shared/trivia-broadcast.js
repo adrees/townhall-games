@@ -36,6 +36,9 @@ function setPhase(name) {
 const playerSpans = new Map();
 let playerCount = 0;
 
+// ── Current question text (persisted across phase transitions) ────────────────
+let currentQuestionText = '';
+
 // ── Elimination phase state ───────────────────────────────────────────────────
 const ELIMINATION_DURATION_MS = 2000;
 let eliminationAnimating = false;
@@ -144,6 +147,7 @@ function onPlayerLeft(msg) {
 }
 
 function onQuestionLive(msg) {
+    currentQuestionText = msg.text;
     setPhase('question');
     document.getElementById('questionText').textContent = msg.text;
     const [a, b, c, d] = msg.options;
@@ -156,6 +160,7 @@ function onQuestionLive(msg) {
 
 function onTimerExpired(_msg) {
     stopCountdown();
+    document.getElementById('breakdownQuestionText').textContent = currentQuestionText;
     setPhase('breakdown');
 }
 

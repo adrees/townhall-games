@@ -10,11 +10,11 @@
     .error-list li { margin: 2px 0; }
     .question-queue { list-style: decimal; padding-left: 20px; }
     .question-queue li { padding: 4px 0; cursor: default; }
-    .question-queue li.current { font-weight: bold; background: #fffbe6; border-left: 3px solid #f0a500; padding-left: 6px; }
-    .stats-panel { background: #f4f8ff; border: 1px solid #c0d4f0; border-radius: 4px; padding: 10px; margin-top: 10px; }
+    .question-queue li.current { font-weight: bold; background: #fffbe6; border-left: 3px solid #f0a500; padding-left: 6px; color: #1a1a2e; }
+    .stats-panel { background: #f4f8ff; border: 1px solid #c0d4f0; border-radius: 4px; padding: 10px; margin-top: 10px; color: #1a1a2e; }
     .stats-panel table { width: 100%; border-collapse: collapse; }
     .stats-panel td { padding: 2px 8px; }
-    .result-panel { background: #f0fff0; border: 1px solid #8c8; border-radius: 4px; padding: 10px; margin-top: 10px; }
+    .result-panel { background: #f0fff0; border: 1px solid #8c8; border-radius: 4px; padding: 10px; margin-top: 10px; color: #1a1a2e; }
     .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
     details summary { cursor: pointer; font-weight: bold; user-select: none; }
     details pre { background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 300px; }
@@ -23,8 +23,6 @@
 <body>
   <div class="container">
     <h1>Teams Trivia - Admin</h1>
-    <a href="/admin"><button>← Game Mode Selector</button></a>
-
     <!-- ─── Setup Phase ─────────────────────────────────────────────────── -->
     <div id="setupSection" class="section">
       <h2>Load Questions</h2>

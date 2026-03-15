@@ -135,6 +135,15 @@
       margin-top: 8px;
     }
 
+    /* ── Breakdown question text ────────────────────────────────────────── */
+    #breakdownQuestionText {
+      font-size: clamp(24px, 4vw, 48px);
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 30px;
+      max-width: 900px;
+    }
+
     /* ── Breakdown bars ─────────────────────────────────────────────────── */
     #breakdownSection { flex-direction: column; }
 
@@ -269,6 +278,7 @@
 
   <!-- ─── Breakdown ─────────────────────────────────────────────────────── -->
   <div id="breakdownSection" class="phase-root">
+    <div id="breakdownQuestionText"></div>
     <h2 style="margin-bottom:20px;">Results</h2>
     <div class="bar-row">
       <span class="bar-label">A</span>
