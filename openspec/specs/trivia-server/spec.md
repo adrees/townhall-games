@@ -1,7 +1,18 @@
-## ADDED Requirements
+## Requirements
+
+### Requirement: create_session establishes a trivia session
+The `create_session` command SHALL NOT carry a `gameMode` discriminant. The server SHALL treat every `create_session` as a trivia session. The command payload SHALL be `{ type: 'create_session', questions: TriviaQuestion[], speed?: boolean }`.
+
+#### Scenario: create_session with questions creates a session
+- **WHEN** a WebSocket connection sends `create_session` with a valid questions array
+- **THEN** a trivia session is created and `session_created` is returned to the sender, who becomes the admin socket
+
+#### Scenario: create_session with speed:true uses 3-second timer
+- **WHEN** `create_session` is sent with `speed: true`
+- **THEN** the session's question timer is set to 3000ms instead of 10000ms
 
 ### Requirement: Admin trivia commands are routed to TriviaGame
-When a session has `gameMode: 'trivia'`, the admin handler SHALL route `start_trivia_question`, `go_live`, and `advance_question` to the corresponding `TriviaGame` methods and broadcast the resulting state change to all connected clients.
+The admin handler SHALL route `start_trivia_question`, `go_live`, and `advance_question` to the corresponding `TriviaGame` methods and broadcast the resulting state change to all connected clients.
 
 #### Scenario: start_trivia_question transitions game to question_preview and broadcasts
 - **WHEN** the admin sends `start_trivia_question` with a valid `questionIndex`
@@ -24,7 +35,7 @@ When a session has `gameMode: 'trivia'`, the admin handler SHALL route `start_tr
 - **THEN** an `error` event SHALL be sent to the admin only; all players are unaffected
 
 ### Requirement: Player submit_answer is routed and confirmed
-When a trivia round is live, the player handler SHALL accept `submit_answer` commands, forward the answer to `TriviaRound.submitAnswer`, and confirm receipt to the individual player.
+While a trivia round is live, the player handler SHALL accept `submit_answer` commands, forward the answer to `TriviaRound.submitAnswer`, and confirm receipt to the individual player.
 
 #### Scenario: Valid answer accepted and confirmed
 - **WHEN** a joined player sends `submit_answer` with a valid `AnswerOption` during `question_live`
@@ -77,14 +88,3 @@ When `TriviaGame.showSurvivors()` transitions to `game_over`, the server SHALL b
 #### Scenario: game_over broadcast contains winner names
 - **WHEN** the game transitions to `game_over`
 - **THEN** a `game_over` event SHALL be broadcast to all players containing the `winners` array of screen names (may be empty if no survivors)
-
-### Requirement: Bingo sessions are unaffected by trivia routing
-All existing Bingo WebSocket behaviour (create_session, start_game, start_new_round, join, mark_word) SHALL continue to function identically when `gameMode` is `'bingo'`. Adding trivia dispatch paths MUST NOT alter any existing Bingo test expectations.
-
-#### Scenario: Bingo session ignores trivia commands
-- **WHEN** a connected client sends `go_live` to a session with `gameMode: 'bingo'`
-- **THEN** an `error` event SHALL be returned and the bingo game state SHALL be unchanged
-
-#### Scenario: Trivia session ignores bingo commands
-- **WHEN** a connected client sends `mark_word` to a session with `gameMode: 'trivia'`
-- **THEN** an `error` event SHALL be returned and the trivia game state SHALL be unchanged
