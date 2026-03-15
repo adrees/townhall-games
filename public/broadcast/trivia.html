@@ -8,16 +8,23 @@
   <style>
     /* ── Phase switching ────────────────────────────────────────────────── */
     #lobbySection,
+    #eliminationSection,
     #questionSection,
     #breakdownSection,
     #survivorSection,
     #winnerSection { display: none; }
 
-    body[data-phase="lobby"]     #lobbySection     { display: flex; }
-    body[data-phase="question"]  #questionSection  { display: flex; }
-    body[data-phase="breakdown"] #breakdownSection { display: flex; }
-    body[data-phase="survivor"]  #survivorSection  { display: flex; }
-    body[data-phase="winner"]    #winnerSection    { display: flex; }
+    body[data-phase="lobby"]       #lobbySection       { display: flex; }
+    body[data-phase="elimination"] #eliminationSection { display: flex; }
+    body[data-phase="question"]    #questionSection    { display: flex; }
+    body[data-phase="breakdown"]   #breakdownSection   { display: flex; }
+    body[data-phase="survivor"]    #survivorSection    { display: flex; }
+    body[data-phase="winner"]      #winnerSection      { display: flex; }
+
+    /* ── Word cloud visibility ──────────────────────────────────────────── */
+    #wordCloud { display: none; }
+    body[data-phase="lobby"]       #wordCloud { display: block; }
+    body[data-phase="elimination"] #wordCloud { display: block; }
 
     /* ── Shared layout ──────────────────────────────────────────────────── */
     .phase-root {
@@ -31,7 +38,15 @@
     }
 
     /* ── Word clouds ────────────────────────────────────────────────────── */
-    #wordCloud, #survivorCloud {
+    #wordCloud {
+      position: relative;
+      width: 100%;
+      height: 60vh;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    #survivorCloud {
       position: relative;
       width: 100%;
       height: 60vh;
@@ -211,8 +226,13 @@
   <div id="lobbySection" class="phase-root">
     <h1 style="margin-bottom:10px;">Teams Trivia</h1>
     <p id="playerCountLabel">Waiting for players...</p>
-    <div id="wordCloud"></div>
   </div>
+
+  <!-- ─── Word cloud (persistent: shown in lobby + elimination phases) ───── -->
+  <div id="wordCloud"></div>
+
+  <!-- ─── Elimination ──────────────────────────────────────────────────── -->
+  <div id="eliminationSection" class="phase-root"></div>
 
   <!-- ─── Question ──────────────────────────────────────────────────────── -->
   <div id="questionSection" class="phase-root">

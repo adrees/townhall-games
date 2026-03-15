@@ -31,10 +31,16 @@ function setPhase(name) {
     document.body.dataset.phase = name;
 }
 
-// ── Player ID → span map (task 3.1) ──────────────────────────────────────────
+// ── Player ID → span map ──────────────────────────────────────────────────────
 /** @type {Map<string, HTMLElement>} */
 const playerSpans = new Map();
 let playerCount = 0;
+
+// ── Elimination phase state ───────────────────────────────────────────────────
+const ELIMINATION_DURATION_MS = 2000;
+let eliminationAnimating = false;
+/** @type {object|null} */
+let pendingSurvivors = null;
 
 // ── SVG ring setup ────────────────────────────────────────────────────────────
 const RING_RADIUS = 52;
@@ -159,23 +165,41 @@ function onAnswerBreakdown(msg) {
 }
 
 function onAnswerRevealed(msg) {
-    // Highlight correct bar
+    // Highlight correct bar (still visible in breakdown section behind word cloud)
     barEls[msg.correct].classList.add('correct');
 
-    // Eliminate player name spans from lobby word cloud
+    // Switch to elimination phase so word cloud is visible
+    setPhase('elimination');
+    eliminationAnimating = true;
+
+    // Animate eliminated names off screen
     for (const playerId of msg.eliminated) {
         const span = playerSpans.get(playerId);
-        if (span) {
-            span.classList.add('eliminated');
-            span.addEventListener('transitionend', () => {
-                span.remove();
-                playerSpans.delete(playerId);
-            }, { once: true });
-        }
+        if (span) span.classList.add('eliminated');
     }
+
+    // After animation window: clean up and flush buffered survivors
+    setTimeout(() => {
+        for (const playerId of msg.eliminated) {
+            const span = playerSpans.get(playerId);
+            if (span) span.remove();
+            playerSpans.delete(playerId);
+        }
+        eliminationAnimating = false;
+        if (pendingSurvivors !== null) {
+            const buffered = pendingSurvivors;
+            pendingSurvivors = null;
+            onSurvivorsRegrouped(buffered);
+        }
+    }, ELIMINATION_DURATION_MS);
 }
 
 function onSurvivorsRegrouped(msg) {
+    if (eliminationAnimating) {
+        pendingSurvivors = msg;
+        return;
+    }
+
     const count = msg.survivorCount;
     survivorCount.textContent = `${count} survivor${count === 1 ? '' : 's'}`;
 
