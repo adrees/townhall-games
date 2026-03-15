@@ -41,6 +41,6 @@
 
 - [x] 6.1 Run `npm test` — all tests pass (250, all green)
 - [x] 6.2 Run `npm run build && npm run build:client` — both compile cleanly with no TypeScript errors
-- [ ] 6.3 Run `npx playwright test` — all e2e tests pass
+- [x] 6.3 Run `npx playwright test` — all e2e tests pass
 - [ ] 6.4 Manual smoke: open `/admin/trivia?demo=true&debug=true`, join as player at `/play?session=demo&name=Alice`, confirm trivia flow works end-to-end
 - [x] 6.5 Update CLAUDE.md: change "two game modes" to trivia-only; remove bingo from directory structure, URL routes, and dev commands sections

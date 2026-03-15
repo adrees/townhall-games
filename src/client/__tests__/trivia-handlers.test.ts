@@ -6,12 +6,6 @@ jest.mock('../ui.js', () => ({
   show: jest.fn(),
   hide: jest.fn(),
   showNotification: jest.fn(),
-  buildGrid: jest.fn(),
-  patchGrid: jest.fn(),
-  setStatusBar: jest.fn(),
-  setRoundIndicator: jest.fn(),
-  showWinBanner: jest.fn(),
-  updateLeaderboard: jest.fn(),
 }));
 
 jest.mock('../ws-client.js', () => ({
