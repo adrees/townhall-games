@@ -1,9 +1,7 @@
 import { send } from './ws-client.js';
 import { show, hide, showNotification } from './ui.js';
-
 let countdownInterval = null;
 let eliminated = false;
-
 function showTriviaOnly(sectionId) {
     hide('waitingSection');
     hide('playingSection');
@@ -16,13 +14,11 @@ function showTriviaOnly(sectionId) {
     show('triviaSection');
     show(sectionId);
 }
-
 export const triviaHandlers = {
     question_preview(_msg) {
         eliminated = false;
         showTriviaOnly('triviaWaiting');
     },
-
     question_live(msg) {
         if (countdownInterval !== null) {
             clearInterval(countdownInterval);
@@ -30,8 +26,9 @@ export const triviaHandlers = {
         document.getElementById('questionText').textContent = msg.text;
         const buttons = document.querySelectorAll('.answer-btn');
         const labels = ['A', 'B', 'C', 'D'];
+        const options = msg.options;
         buttons.forEach((btn, i) => {
-            btn.textContent = labels[i] + '. ' + msg.options[i];
+            btn.textContent = labels[i] + '. ' + options[i];
             btn.disabled = false;
             btn.classList.remove('selected');
         });
@@ -48,7 +45,6 @@ export const triviaHandlers = {
         }, 1000);
         showTriviaOnly('triviaQuestion');
     },
-
     timer_expired(_msg) {
         if (countdownInterval !== null) {
             clearInterval(countdownInterval);
@@ -62,15 +58,12 @@ export const triviaHandlers = {
         });
         showTriviaOnly('triviaBreakdown');
     },
-
     answer_breakdown(_msg) {
         show('triviaBreakdown');
     },
-
     answer_accepted(_msg) {
         showNotification('Answer received!', 'success');
     },
-
     you_are_eliminated(msg) {
         eliminated = true;
         document.getElementById('outcomeText').textContent = "You're out!";
@@ -80,7 +73,6 @@ export const triviaHandlers = {
         document.getElementById('survivorCountText').textContent = '';
         showTriviaOnly('triviaOutcome');
     },
-
     you_survived(msg) {
         const count = msg.survivorCount;
         document.getElementById('outcomeText').textContent = "You're through!";
@@ -89,7 +81,6 @@ export const triviaHandlers = {
             count + ' player' + (count === 1 ? '' : 's') + ' remaining';
         showTriviaOnly('triviaOutcome');
     },
-
     survivors_regrouped(msg) {
         const count = msg.survivorCount;
         const countEl = document.getElementById('survivorCountText');
@@ -103,7 +94,6 @@ export const triviaHandlers = {
         }
         show('triviaOutcome');
     },
-
     game_over(msg) {
         const winners = msg.winners;
         const text = winners.length > 0 ? winners.join(', ') : 'No survivors';
@@ -114,7 +104,7 @@ export const triviaHandlers = {
         showTriviaOnly('triviaOutcome');
     },
 };
-
+// Register answer button click handler
 export function initAnswerButtons() {
     const container = document.getElementById('answerButtons');
     if (!container)

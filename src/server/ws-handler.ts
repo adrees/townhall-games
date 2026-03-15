@@ -20,7 +20,6 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
   const socketToPlayer = new Map<WebSocket, PlayerInfo>();
   const playerToSocket = new Map<string, WebSocket>();
   const spectatorSockets = new Set<WebSocket>();
-  let pendingJoinSocket: WebSocket | null = null;
   let timerHandle: ReturnType<typeof setTimeout> | null = null;
 
   function send(ws: WebSocket, event: ServerEvent): void {
@@ -58,27 +57,6 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
 
   function handleSessionEvent(event: GameEvent): void {
     switch (event.type) {
-      case 'game_started':
-      case 'new_round_started': {
-        const ws = playerToSocket.get(event.playerId) ?? pendingJoinSocket;
-        if (ws) {
-          send(ws, {
-            type: 'card_dealt',
-            roundNumber: event.roundNumber,
-            grid: event.playerCard.getGrid(),
-            marked: event.playerCard.getMarked(),
-          });
-        }
-        broadcast({ type: 'game_status', status: session!.getGameStatus(), round: session!.getCurrentRound() });
-        broadcast({ type: 'leaderboard', entries: session!.getLeaderboard() });
-        break;
-      }
-      case 'player_won': {
-        broadcast({ type: 'player_won', winnerName: event.winnerName, pattern: event.pattern, roundNumber: event.roundNumber });
-        broadcast({ type: 'leaderboard', entries: session!.getLeaderboard() });
-        broadcast({ type: 'game_status', status: session!.getGameStatus(), round: session!.getCurrentRound() });
-        break;
-      }
       case 'player_joined': {
         broadcast({ type: 'player_joined', playerId: event.playerId, screenName: event.screenName, playerCount: session!.getPlayers().length });
         break;
@@ -103,7 +81,6 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
     // Per-player individual events
     for (const [ws, info] of socketToPlayer) {
       if (result.eliminated.includes(info.playerId)) {
-        const yourAnswer = round.getAnswerCounts(); // we need the raw answers — use elimination indicator
         send(ws, { type: 'you_are_eliminated', correctAnswer: result.correctAnswer, yourAnswer: null });
       } else if (result.survivors.includes(info.playerId)) {
         send(ws, { type: 'you_survived', survivorCount: result.survivors.length });
@@ -117,7 +94,7 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
     if (triviaGame.state === 'game_over') {
       broadcast({ type: 'game_over', winners: triviaGame.getWinners().map(w => w.screenName) });
     } else {
-      const survivorNames = triviaGame.getSurvivors(); // ids — in a real game map to screen names; use ids for now
+      const survivorNames = triviaGame.getSurvivors();
       broadcast({ type: 'survivors_regrouped', survivorCount: survivorNames.length, survivorNames });
     }
   }
@@ -136,50 +113,9 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
     timerHandle = setTimeout(onReveal, TriviaGame.REVEAL_DELAY_MS);
   }
 
-  // ── Bingo admin commands ─────────────────────────────────────────────────
+  // ── Admin commands ───────────────────────────────────────────────────────
 
-  function handleBingoAdminCommand(ws: WebSocket, raw: string): void {
-    const command = parseCommand(raw);
-    if (!command) { send(ws, { type: 'error', message: 'Invalid command' }); return; }
-
-    try {
-      switch (command.type) {
-        case 'create_session': {
-          if (session) { send(ws, { type: 'error', message: 'Session already exists' }); return; }
-          if (command.gameMode === 'trivia') {
-            session = new Session('trivia', []);
-            triviaGame = new TriviaGame(session.id, command.questions, { speedMode: command.speed });
-          } else {
-            session = new Session('bingo', command.words);
-          }
-          session.addEventListener(handleSessionEvent);
-          adminSocket = ws;
-          send(ws, { type: 'session_created', sessionId: session.id });
-          break;
-        }
-        case 'start_game': {
-          if (!session) { send(ws, { type: 'error', message: 'No session exists' }); return; }
-          if (ws !== adminSocket) { send(ws, { type: 'error', message: 'Only admin can start the game' }); return; }
-          session.startGame();
-          break;
-        }
-        case 'start_new_round': {
-          if (!session) { send(ws, { type: 'error', message: 'No session exists' }); return; }
-          if (ws !== adminSocket) { send(ws, { type: 'error', message: 'Only admin can start a new round' }); return; }
-          session.startNewRound();
-          break;
-        }
-        default:
-          send(ws, { type: 'error', message: 'Command not valid for bingo session' });
-      }
-    } catch (err: unknown) {
-      send(ws, { type: 'error', message: err instanceof Error ? err.message : 'Unknown error' });
-    }
-  }
-
-  // ── Trivia admin commands ────────────────────────────────────────────────
-
-  function handleTriviaAdminCommand(ws: WebSocket, raw: string): void {
+  function handleAdminCommand(ws: WebSocket, raw: string): void {
     const command = parseCommand(raw);
     if (!command) { send(ws, { type: 'error', message: 'Invalid command' }); return; }
 
@@ -194,7 +130,6 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
           break;
         }
         case 'go_live': {
-          // First question only: register all currently joined players as survivors
           if (triviaGame.getSurvivors().length === 0) {
             const playerIds = [...socketToPlayer.values()].map(info => info.playerId);
             triviaGame.registerPlayers(playerIds);
@@ -220,9 +155,9 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
     }
   }
 
-  // ── Bingo player commands ────────────────────────────────────────────────
+  // ── Player commands ──────────────────────────────────────────────────────
 
-  function handleBingoPlayerCommand(ws: WebSocket, raw: string): void {
+  function handlePlayerCommand(ws: WebSocket, raw: string): void {
     const command = parseCommand(raw);
     if (!command) { send(ws, { type: 'error', message: 'Invalid command' }); return; }
 
@@ -230,55 +165,18 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
       switch (command.type) {
         case 'join': {
           if (!session) { send(ws, { type: 'error', message: 'No session exists' }); return; }
-          pendingJoinSocket = ws;
           const player = session.addPlayer(command.screenName);
-          pendingJoinSocket = null;
-          socketToPlayer.set(ws, { playerId: player.id, screenName: player.screenName });
-          playerToSocket.set(player.id, ws);
-          send(ws, { type: 'joined', playerId: player.id, screenName: player.screenName, gameStatus: session.getGameStatus(), round: session.getCurrentRound() });
-          break;
-        }
-        case 'mark_word': {
-          if (!session) { send(ws, { type: 'error', message: 'No session exists' }); return; }
-          const info = socketToPlayer.get(ws);
-          if (!info) { send(ws, { type: 'error', message: 'Not joined as a player' }); return; }
-          const result = session.markWord(info.playerId, command.word);
-          send(ws, { type: 'mark_result', success: result.success, word: command.word, bingo: result.bingo, roundOver: result.roundOver });
-          break;
-        }
-        default:
-          send(ws, { type: 'error', message: 'Command not valid for bingo player' });
-      }
-    } catch (err: unknown) {
-      send(ws, { type: 'error', message: err instanceof Error ? err.message : 'Unknown error' });
-    }
-  }
-
-  // ── Trivia player commands ───────────────────────────────────────────────
-
-  function handleTriviaPlayerCommand(ws: WebSocket, raw: string): void {
-    const command = parseCommand(raw);
-    if (!command) { send(ws, { type: 'error', message: 'Invalid command' }); return; }
-
-    try {
-      switch (command.type) {
-        case 'join': {
-          if (!session) { send(ws, { type: 'error', message: 'No session exists' }); return; }
-          pendingJoinSocket = ws;
-          const player = session.addPlayer(command.screenName);
-          pendingJoinSocket = null;
           socketToPlayer.set(ws, { playerId: player.id, screenName: player.screenName });
           playerToSocket.set(player.id, ws);
           send(ws, { type: 'joined', playerId: player.id, screenName: player.screenName, gameStatus: session.getGameStatus(), round: session.getCurrentRound() });
           break;
         }
         case 'submit_answer': {
-          if (!triviaGame || triviaGame.state !== 'question_live') return; // silently ignore
+          if (!triviaGame || triviaGame.state !== 'question_live') return;
           const info = socketToPlayer.get(ws);
           if (!info) { send(ws, { type: 'error', message: 'Not joined as a player' }); return; }
           triviaGame.getCurrentRound()?.submitAnswer(info.playerId, command.answer);
           send(ws, { type: 'answer_accepted' });
-          // Stream live stats to admin
           const counts = triviaGame.getCurrentRound()!.getAnswerCounts();
           const answered = counts.A + counts.B + counts.C + counts.D;
           const remaining = triviaGame.getSurvivors().length - answered;
@@ -297,50 +195,43 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
 
   function handleMessage(ws: WebSocket, raw: string): void {
     const cmd = parseCommand(raw);
-    if (cmd?.type === 'register_spectator') {
+    if (!cmd) { send(ws, { type: 'error', message: 'Invalid command' }); return; }
+    if (cmd.type === 'register_spectator') {
       spectatorSockets.add(ws);
       return;
     }
 
-    // create_session always resets state so admin can start a new game from scratch
-    if (cmd?.type === 'create_session') {
+    if (cmd.type === 'create_session') {
       session = null;
       triviaGame = null;
       adminSocket = null;
       if (timerHandle) { clearTimeout(timerHandle); timerHandle = null; }
-      handleBingoAdminCommand(ws, raw);
-      return;
-    }
-
-    // Session creation (or first admin contact for pre-injected trivia session)
-    if (!session) {
-      handleBingoAdminCommand(ws, raw);
+      session = new Session('trivia', []);
+      triviaGame = new TriviaGame(session.id, cmd.questions, { speedMode: cmd.speed });
+      session.addEventListener(handleSessionEvent);
+      adminSocket = ws;
+      send(ws, { type: 'session_created', sessionId: session.id });
       return;
     }
 
     // For injected trivia sessions, first non-player message sets adminSocket
-    if (session.gameMode === 'trivia' && adminSocket === null) {
-      const cmd = parseCommand(raw);
-      if (cmd && cmd.type !== 'join' && cmd.type !== 'submit_answer') {
+    if (session && adminSocket === null) {
+      if (cmd.type !== 'join' && cmd.type !== 'submit_answer') {
         adminSocket = ws;
       }
     }
 
+    if (!session) {
+      send(ws, { type: 'error', message: 'No session exists' });
+      return;
+    }
+
     const isAdmin = ws === adminSocket;
-    const gameMode = session.gameMode;
 
     if (isAdmin) {
-      if (gameMode === 'trivia') {
-        handleTriviaAdminCommand(ws, raw);
-      } else {
-        handleBingoAdminCommand(ws, raw);
-      }
+      handleAdminCommand(ws, raw);
     } else {
-      if (gameMode === 'trivia') {
-        handleTriviaPlayerCommand(ws, raw);
-      } else {
-        handleBingoPlayerCommand(ws, raw);
-      }
+      handlePlayerCommand(ws, raw);
     }
   }
 

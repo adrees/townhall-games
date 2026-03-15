@@ -1,30 +1,17 @@
-import type { WinPattern, PlayerScore, AnswerOption, TriviaQuestion } from '../core/types';
+import type { PlayerScore, AnswerOption, TriviaQuestion } from '../core/types';
 
 // Client → Server commands
 
-export type CreateSessionCommand =
-  | { type: 'create_session'; gameMode: 'bingo'; words: string[] }
-  | { type: 'create_session'; gameMode: 'trivia'; questions: TriviaQuestion[]; speed?: boolean };
-
-export interface StartGameCommand {
-  type: 'start_game';
-}
-
-export interface StartNewRoundCommand {
-  type: 'start_new_round';
+export interface CreateSessionCommand {
+  type: 'create_session';
+  questions: TriviaQuestion[];
+  speed?: boolean;
 }
 
 export interface JoinCommand {
   type: 'join';
   screenName: string;
 }
-
-export interface MarkWordCommand {
-  type: 'mark_word';
-  word: string;
-}
-
-// Trivia admin → server commands
 
 export interface StartTriviaQuestionCommand {
   type: 'start_trivia_question';
@@ -39,8 +26,6 @@ export interface AdvanceQuestionCommand {
   type: 'advance_question';
 }
 
-// Trivia player → server commands
-
 export interface SubmitAnswerCommand {
   type: 'submit_answer';
   answer: AnswerOption;
@@ -52,17 +37,14 @@ export interface RegisterSpectatorCommand {
 
 export type Command =
   | CreateSessionCommand
-  | StartGameCommand
-  | StartNewRoundCommand
   | JoinCommand
-  | MarkWordCommand
   | StartTriviaQuestionCommand
   | GoLiveCommand
   | AdvanceQuestionCommand
   | SubmitAnswerCommand
   | RegisterSpectatorCommand;
 
-// Server → Client events (Bingo)
+// Server → Client events
 
 export interface SessionCreatedEvent {
   type: 'session_created';
@@ -75,13 +57,6 @@ export interface JoinedEvent {
   screenName: string;
   gameStatus: string;
   round: number;
-}
-
-export interface CardDealtEvent {
-  type: 'card_dealt';
-  roundNumber: number;
-  grid: string[][];
-  marked: boolean[][];
 }
 
 export interface PlayerJoinedEvent {
@@ -98,38 +73,16 @@ export interface PlayerLeftEvent {
   playerCount: number;
 }
 
-export interface MarkResultEvent {
-  type: 'mark_result';
-  success: boolean;
-  word: string;
-  bingo: boolean;
-  roundOver: boolean;
-}
-
-export interface PlayerWonEvent {
-  type: 'player_won';
-  winnerName: string;
-  pattern: WinPattern;
-  roundNumber: number;
-}
-
 export interface GameStatusEvent {
   type: 'game_status';
   status: string;
   round: number;
 }
 
-export interface LeaderboardEvent {
-  type: 'leaderboard';
-  entries: PlayerScore[];
-}
-
 export interface ErrorEvent {
   type: 'error';
   message: string;
 }
-
-// Server → All players (Trivia broadcasts)
 
 export interface QuestionPreviewEvent {
   type: 'question_preview';
@@ -173,8 +126,6 @@ export interface GameOverEvent {
   winners: string[];
 }
 
-// Server → Individual player (Trivia)
-
 export interface YouAreEliminatedEvent {
   type: 'you_are_eliminated';
   correctAnswer: AnswerOption;
@@ -190,8 +141,6 @@ export interface AnswerAcceptedEvent {
   type: 'answer_accepted';
 }
 
-// Server → Admin only (Trivia)
-
 export interface LiveAnswerStatsEvent {
   type: 'live_answer_stats';
   counts: { A: number; B: number; C: number; D: number };
@@ -206,16 +155,17 @@ export interface QuestionResultEvent {
   survivors: string[];
 }
 
+export interface LeaderboardEvent {
+  type: 'leaderboard';
+  entries: PlayerScore[];
+}
+
 export type ServerEvent =
   | SessionCreatedEvent
   | JoinedEvent
-  | CardDealtEvent
   | PlayerJoinedEvent
   | PlayerLeftEvent
-  | MarkResultEvent
-  | PlayerWonEvent
   | GameStatusEvent
-  | LeaderboardEvent
   | ErrorEvent
   | QuestionPreviewEvent
   | QuestionLiveEvent
@@ -228,16 +178,14 @@ export type ServerEvent =
   | YouSurvivedEvent
   | AnswerAcceptedEvent
   | LiveAnswerStatsEvent
-  | QuestionResultEvent;
+  | QuestionResultEvent
+  | LeaderboardEvent;
 
 const VALID_ANSWER_OPTIONS = new Set<string>(['A', 'B', 'C', 'D']);
 
 const COMMAND_TYPES = new Set([
   'create_session',
-  'start_game',
-  'start_new_round',
   'join',
-  'mark_word',
   'start_trivia_question',
   'go_live',
   'advance_question',
@@ -259,47 +207,28 @@ export function parseCommand(raw: string): Command | null {
   if (typeof obj.type !== 'string' || !COMMAND_TYPES.has(obj.type)) return null;
 
   switch (obj.type) {
-    case 'create_session':
-      if (obj.gameMode === 'trivia') {
-        if (!Array.isArray(obj.questions)) return null;
-        const questions = obj.questions as Record<string, unknown>[];
-        const validQuestions = questions.every(
-          (q) =>
-            typeof q === 'object' && q !== null &&
-            typeof q.question === 'string' && q.question.trim() !== '' &&
-            typeof q.a === 'string' && typeof q.b === 'string' &&
-            typeof q.c === 'string' && typeof q.d === 'string' &&
-            VALID_ANSWER_OPTIONS.has(q.correct as string)
-        );
-        if (!validQuestions) return null;
-        return {
-          type: 'create_session',
-          gameMode: 'trivia',
-          questions: obj.questions as import('../core/types').TriviaQuestion[],
-          speed: obj.speed === true,
-        };
-      }
-      if (obj.gameMode === 'bingo') {
-        if (!Array.isArray(obj.words) || !obj.words.every((w: unknown) => typeof w === 'string')) {
-          return null;
-        }
-        return { type: 'create_session', gameMode: 'bingo', words: obj.words as string[] };
-      }
-      return null;
-
-    case 'start_game':
-      return { type: 'start_game' };
-
-    case 'start_new_round':
-      return { type: 'start_new_round' };
+    case 'create_session': {
+      if (!Array.isArray(obj.questions)) return null;
+      const questions = obj.questions as Record<string, unknown>[];
+      const validQuestions = questions.every(
+        (q) =>
+          typeof q === 'object' && q !== null &&
+          typeof q.question === 'string' && q.question.trim() !== '' &&
+          typeof q.a === 'string' && typeof q.b === 'string' &&
+          typeof q.c === 'string' && typeof q.d === 'string' &&
+          VALID_ANSWER_OPTIONS.has(q.correct as string)
+      );
+      if (!validQuestions) return null;
+      return {
+        type: 'create_session',
+        questions: obj.questions as TriviaQuestion[],
+        speed: obj.speed === true,
+      };
+    }
 
     case 'join':
       if (typeof obj.screenName !== 'string') return null;
       return { type: 'join', screenName: obj.screenName };
-
-    case 'mark_word':
-      if (typeof obj.word !== 'string') return null;
-      return { type: 'mark_word', word: obj.word };
 
     case 'start_trivia_question':
       if (typeof obj.questionIndex !== 'number') return null;

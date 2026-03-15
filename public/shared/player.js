@@ -1,7 +1,6 @@
 import { connect, send } from './ws-client.js';
-import { handlers } from './handlers.js';
+import { handleMessage } from './handlers.js';
 import { showNotification } from './ui.js';
-import { state } from './state.js';
 import { triviaHandlers, initAnswerButtons } from './trivia-handlers.js';
 // --- Join form -----------------------------------------------------------
 function joinGame(name) {
@@ -19,33 +18,14 @@ document.getElementById('screenName')
     if (e.key === 'Enter')
         joinGame();
 });
-// --- Grid click (event delegation) ----------------------------------------
-// A single listener on the grid container handles all cell clicks.
-// This never needs to be re-attached when the grid is rebuilt.
-document.getElementById('bingoGrid')
-    .addEventListener('click', (e) => {
-    const cell = e.target.closest('.cell');
-    if (!cell ||
-        !state.gameActive ||
-        cell.classList.contains('free') ||
-        cell.classList.contains('marked'))
-        return;
-    const r = Number(cell.dataset.row);
-    const c = Number(cell.dataset.col);
-    if (state.grid) {
-        send({ type: 'mark_word', word: state.grid[r][c] });
-    }
-});
-// --- Combined message handler (trivia first, bingo fallback) ---------------
+// --- Combined message handler (trivia first, shared fallback) --------------
 function combinedHandler(msg) {
     const triviaHandler = triviaHandlers[msg.type];
     if (triviaHandler) {
         triviaHandler(msg);
         return;
     }
-    const bingoHandler = handlers[msg.type];
-    if (bingoHandler)
-        bingoHandler(msg);
+    handleMessage(msg);
 }
 // --- Auto-join via query params ---------------------------------------------
 function getAutoJoinName() {

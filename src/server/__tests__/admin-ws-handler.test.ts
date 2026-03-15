@@ -4,8 +4,12 @@ import { TriviaGame } from '../../core/games/trivia';
 import { Session } from '../../core/session';
 import type { TriviaQuestion } from '../../core/types';
 
-function makeWords(count = 30): string[] {
-  return Array.from({ length: count }, (_, i) => `word${i + 1}`);
+function makeQuestions(n = 3): TriviaQuestion[] {
+  return Array.from({ length: n }, (_, i) => ({
+    question: `Q${i + 1}?`,
+    a: 'A1', b: 'B1', c: 'C1', d: 'D1',
+    correct: 'A' as const,
+  }));
 }
 
 // Mock WebSocket for the local admin connection
@@ -96,7 +100,7 @@ describe('AdminWsHandler', () => {
 
   function connectAdmin(): void {
     handler.handleAdminConnection(adminWs as any);
-    adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
+    adminWs.receive({ type: 'create_session', questions: makeQuestions() });
   }
 
   function joinPlayer(connectionId: string, screenName: string): void {
@@ -104,9 +108,9 @@ describe('AdminWsHandler', () => {
   }
 
   describe('create_session', () => {
-    it('creates a session and responds with session_created', () => {
+    it('creates a trivia session and responds with session_created', () => {
       handler.handleAdminConnection(adminWs as any);
-      adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
+      adminWs.receive({ type: 'create_session', questions: makeQuestions() });
       const msg = adminWs.lastMessage();
       expect(msg?.type).toBe('session_created');
       expect(msg?.sessionId).toBeDefined();
@@ -114,31 +118,14 @@ describe('AdminWsHandler', () => {
 
     it('returns error if session already exists', () => {
       connectAdmin();
-      adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
+      adminWs.receive({ type: 'create_session', questions: makeQuestions() });
       expect(adminWs.lastMessage()?.type).toBe('error');
     });
 
-    describe('trivia', () => {
-      const makeQuestions = (n = 3): TriviaQuestion[] =>
-        Array.from({ length: n }, (_, i) => ({
-          question: `Q${i + 1}?`,
-          a: 'A1', b: 'B1', c: 'C1', d: 'D1',
-          correct: 'A' as const,
-        }));
-
-      it('creates a trivia session and responds with session_created', () => {
-        handler.handleAdminConnection(adminWs as any);
-        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
-        const msg = adminWs.lastMessage();
-        expect(msg?.type).toBe('session_created');
-        expect(msg?.sessionId).toBeDefined();
-      });
-
-      it('uses 3-second timer when speed: true', () => {
-        handler.handleAdminConnection(adminWs as any);
-        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions(), speed: true });
-        expect(adminWs.lastMessage()?.type).toBe('session_created');
-      });
+    it('uses 3-second timer when speed: true', () => {
+      handler.handleAdminConnection(adminWs as any);
+      adminWs.receive({ type: 'create_session', questions: makeQuestions(), speed: true });
+      expect(adminWs.lastMessage()?.type).toBe('session_created');
     });
   });
 
@@ -177,90 +164,6 @@ describe('AdminWsHandler', () => {
     });
   });
 
-  describe('start_game', () => {
-    it('starts the game and deals cards to players via relay', () => {
-      connectAdmin();
-      joinPlayer('conn-1', 'Alice');
-      relay.clearAll();
-      adminWs.clearSent();
-
-      adminWs.receive({ type: 'start_game' });
-
-      // Player should receive card_dealt via relay
-      const card = relay.allSentTo('conn-1').find((m) => m.type === 'card_dealt');
-      expect(card).toBeDefined();
-      expect(card?.roundNumber).toBe(1);
-      expect(card?.grid).toBeDefined();
-
-      // game_status broadcast
-      expect(relay.broadcastsOfType('game_status').length).toBeGreaterThanOrEqual(1);
-      const status = relay.broadcastsOfType('game_status')[0];
-      expect(status?.status).toBe('active');
-
-      // Admin also gets game_status
-      expect(adminWs.messagesOfType('game_status').length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('returns error if not admin', () => {
-      connectAdmin();
-      // Player tries to start game
-      handler.handlePlayerCommand('conn-1', JSON.stringify({ type: 'start_game' }));
-      const msg = relay.lastSentTo('conn-1');
-      expect(msg?.type).toBe('error');
-    });
-  });
-
-  describe('mark_word via relay', () => {
-    it('returns mark_result to the player', () => {
-      connectAdmin();
-      joinPlayer('conn-1', 'Alice');
-      adminWs.receive({ type: 'start_game' });
-
-      // Get a word from the dealt card
-      const card = relay.allSentTo('conn-1').find((m) => m.type === 'card_dealt');
-      const grid = card?.grid as string[][];
-      const word = grid[0][0];
-      relay.clearAll();
-
-      handler.handlePlayerCommand('conn-1', JSON.stringify({ type: 'mark_word', word }));
-      const result = relay.lastSentTo('conn-1');
-      expect(result?.type).toBe('mark_result');
-      expect(result?.success).toBe(true);
-      expect(result?.word).toBe(word);
-    });
-
-    it('returns error if player not joined', () => {
-      connectAdmin();
-      handler.handlePlayerCommand('conn-unknown', JSON.stringify({ type: 'mark_word', word: 'test' }));
-      const msg = relay.lastSentTo('conn-unknown');
-      expect(msg?.type).toBe('error');
-      expect(msg?.message).toBe('Not joined as a player');
-    });
-  });
-
-  describe('start_new_round', () => {
-    it('starts a new round after a win', () => {
-      connectAdmin();
-      joinPlayer('conn-1', 'Alice');
-      adminWs.receive({ type: 'start_game' });
-
-      // Win by marking first row
-      const card = relay.allSentTo('conn-1').find((m) => m.type === 'card_dealt');
-      const grid = card?.grid as string[][];
-      for (let c = 0; c < 5; c++) {
-        handler.handlePlayerCommand('conn-1', JSON.stringify({ type: 'mark_word', word: grid[0][c] }));
-      }
-      relay.clearAll();
-      adminWs.clearSent();
-
-      adminWs.receive({ type: 'start_new_round' });
-
-      const newCard = relay.allSentTo('conn-1').find((m) => m.type === 'card_dealt');
-      expect(newCard).toBeDefined();
-      expect(newCard?.roundNumber).toBe(2);
-    });
-  });
-
   describe('player disconnect', () => {
     it('removes player and broadcasts player_left', () => {
       connectAdmin();
@@ -279,22 +182,6 @@ describe('AdminWsHandler', () => {
     });
   });
 
-  describe('late joiner', () => {
-    it('gets a card dealt when joining an active game', () => {
-      connectAdmin();
-      joinPlayer('conn-1', 'Bob');
-      adminWs.receive({ type: 'start_game' });
-      relay.clearAll();
-
-      // Late join
-      joinPlayer('conn-2', 'Alice');
-
-      const card = relay.allSentTo('conn-2').find((m) => m.type === 'card_dealt');
-      expect(card).toBeDefined();
-      expect(card?.roundNumber).toBe(1);
-    });
-  });
-
   describe('invalid commands', () => {
     it('returns error for invalid JSON', () => {
       connectAdmin();
@@ -302,24 +189,6 @@ describe('AdminWsHandler', () => {
       const msg = relay.lastSentTo('conn-1');
       expect(msg?.type).toBe('error');
       expect(msg?.message).toBe('Invalid command');
-    });
-  });
-
-  describe('cross-mode rejection (bingo)', () => {
-    it('returns error when trivia admin command sent to bingo session', () => {
-      connectAdmin();
-      adminWs.clearSent();
-      adminWs.receive({ type: 'go_live' });
-      expect(adminWs.lastMessage()?.type).toBe('error');
-    });
-
-    it('returns error when trivia player command sent to bingo session', () => {
-      connectAdmin();
-      joinPlayer('conn-1', 'Alice');
-      relay.clearAll();
-      handler.handlePlayerCommand('conn-1', JSON.stringify({ type: 'submit_answer', answer: 'A' }));
-      const msg = relay.lastSentTo('conn-1');
-      expect(msg?.type).toBe('error');
     });
   });
 

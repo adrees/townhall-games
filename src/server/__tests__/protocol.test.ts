@@ -20,62 +20,25 @@ describe('parseCommand', () => {
   });
 
   describe('create_session', () => {
-    describe('bingo', () => {
-      it('parses valid bingo create_session', () => {
-        const cmd = parseCommand('{"type":"create_session","gameMode":"bingo","words":["a","b","c"]}');
-        expect(cmd).toEqual({ type: 'create_session', gameMode: 'bingo', words: ['a', 'b', 'c'] });
-      });
+    const validQuestion = { question: 'Q?', a: 'A1', b: 'B1', c: 'C1', d: 'D1', correct: 'A' };
 
-      it('returns null if gameMode is missing', () => {
-        expect(parseCommand('{"type":"create_session","words":["a"]}')).toBeNull();
-      });
-
-      it('returns null if words is missing for bingo', () => {
-        expect(parseCommand('{"type":"create_session","gameMode":"bingo"}')).toBeNull();
-      });
-
-      it('returns null if words contains non-strings', () => {
-        expect(parseCommand('{"type":"create_session","gameMode":"bingo","words":[1,2]}')).toBeNull();
-      });
+    it('parses valid create_session', () => {
+      const cmd = parseCommand(JSON.stringify({ type: 'create_session', questions: [validQuestion] }));
+      expect(cmd).toEqual({ type: 'create_session', questions: [validQuestion], speed: false });
     });
 
-    describe('trivia', () => {
-      const validQuestion = { question: 'Q?', a: 'A1', b: 'B1', c: 'C1', d: 'D1', correct: 'A' };
-
-      it('parses valid trivia create_session', () => {
-        const cmd = parseCommand(JSON.stringify({ type: 'create_session', gameMode: 'trivia', questions: [validQuestion] }));
-        expect(cmd).toEqual({ type: 'create_session', gameMode: 'trivia', questions: [validQuestion], speed: false });
-      });
-
-      it('parses trivia create_session with speed: true', () => {
-        const cmd = parseCommand(JSON.stringify({ type: 'create_session', gameMode: 'trivia', questions: [validQuestion], speed: true }));
-        expect(cmd).toEqual({ type: 'create_session', gameMode: 'trivia', questions: [validQuestion], speed: true });
-      });
-
-      it('returns null if questions is missing', () => {
-        expect(parseCommand('{"type":"create_session","gameMode":"trivia"}')).toBeNull();
-      });
-
-      it('returns null if a question has an invalid correct field', () => {
-        const bad = { ...validQuestion, correct: 'E' };
-        expect(parseCommand(JSON.stringify({ type: 'create_session', gameMode: 'trivia', questions: [bad] }))).toBeNull();
-      });
-
-      it('returns null for unknown gameMode', () => {
-        expect(parseCommand('{"type":"create_session","gameMode":"other"}')).toBeNull();
-      });
+    it('parses create_session with speed: true', () => {
+      const cmd = parseCommand(JSON.stringify({ type: 'create_session', questions: [validQuestion], speed: true }));
+      expect(cmd).toEqual({ type: 'create_session', questions: [validQuestion], speed: true });
     });
-  });
 
-  describe('start_game', () => {
-    it('parses valid start_game', () => {
-      expect(parseCommand('{"type":"start_game"}')).toEqual({ type: 'start_game' });
+    it('returns null if questions is missing', () => {
+      expect(parseCommand('{"type":"create_session"}')).toBeNull();
     });
-  });
 
-  describe('start_new_round', () => {
-    it('parses valid start_new_round', () => {
-      expect(parseCommand('{"type":"start_new_round"}')).toEqual({ type: 'start_new_round' });
+    it('returns null if a question has an invalid correct field', () => {
+      const bad = { ...validQuestion, correct: 'E' };
+      expect(parseCommand(JSON.stringify({ type: 'create_session', questions: [bad] }))).toBeNull();
     });
   });
 
@@ -93,19 +56,6 @@ describe('parseCommand', () => {
 
     it('returns null if screenName is not a string', () => {
       expect(parseCommand('{"type":"join","screenName":42}')).toBeNull();
-    });
-  });
-
-  describe('mark_word', () => {
-    it('parses valid mark_word', () => {
-      expect(parseCommand('{"type":"mark_word","word":"synergy"}')).toEqual({
-        type: 'mark_word',
-        word: 'synergy',
-      });
-    });
-
-    it('returns null if word is missing', () => {
-      expect(parseCommand('{"type":"mark_word"}')).toBeNull();
     });
   });
 

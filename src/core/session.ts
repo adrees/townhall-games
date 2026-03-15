@@ -1,32 +1,21 @@
 import { randomUUID } from 'crypto';
-import { BingoGame } from './games/bingo/bingo-game';
-import { BingoCard } from './games/bingo/bingo-card';
 import type {
   Player,
   PlayerScore,
-  MarkResult,
   GameEvent,
   EventListener,
-  WinPattern,
 } from './types';
 
 export class Session {
   readonly id: string;
-  readonly gameMode: 'bingo' | 'trivia';
-  private readonly wordList: string[];
+  readonly gameMode: 'trivia';
   private players: Map<string, Player> = new Map();
-  private game: BingoGame | null = null;
   private listeners: EventListener[] = [];
   private scores: Map<string, { totalPoints: number; roundsWon: number; lastWinRound?: number }> = new Map();
 
-  constructor(gameMode: 'bingo' | 'trivia', wordList: string[]) {
-    if (gameMode === 'bingo') {
-      // Validate word list by trying to construct a BingoGame (reuses its validation)
-      new BingoGame('validate', wordList);
-    }
+  constructor(_gameMode: 'trivia', _wordList: string[]) {
     this.id = randomUUID();
-    this.gameMode = gameMode;
-    this.wordList = wordList;
+    this.gameMode = 'trivia';
   }
 
   addPlayer(screenName: string): Player {
@@ -35,7 +24,6 @@ export class Session {
       throw new Error('Screen name cannot be blank');
     }
 
-    // Check uniqueness (case-insensitive)
     const lower = trimmed.toLowerCase();
     for (const p of this.players.values()) {
       if (p.screenName.toLowerCase() === lower) {
@@ -53,17 +41,6 @@ export class Session {
     this.scores.set(player.id, { totalPoints: 0, roundsWon: 0 });
 
     this.emit({ type: 'player_joined', playerId: player.id, screenName: trimmed });
-
-    // Late joiner: auto-generate card if game is active
-    if (this.game && this.game.getStatus() === 'active') {
-      const card = this.game.generateCardForPlayer(player.id);
-      this.emit({
-        type: 'game_started',
-        roundNumber: this.game.getCurrentRound(),
-        playerId: player.id,
-        playerCard: card,
-      });
-    }
 
     return player;
   }
@@ -86,108 +63,12 @@ export class Session {
     return [...this.players.values()];
   }
 
-  startGame(): void {
-    if (this.players.size === 0) {
-      throw new Error('Cannot start game: at least 1 player required');
-    }
-
-    this.game = new BingoGame(this.id, this.wordList);
-    this.game.start();
-
-    // Generate cards for all players and emit events
-    for (const player of this.players.values()) {
-      const card = this.game.generateCardForPlayer(player.id);
-      this.emit({
-        type: 'game_started',
-        roundNumber: 1,
-        playerId: player.id,
-        playerCard: card,
-      });
-    }
-  }
-
-  startNewRound(): void {
-    if (!this.game) {
-      throw new Error('No game to start a new round for');
-    }
-
-    this.game.startNewRound();
-
-    // Generate new cards for all current players
-    for (const player of this.players.values()) {
-      const card = this.game.generateCardForPlayer(player.id);
-      this.emit({
-        type: 'new_round_started',
-        roundNumber: this.game.getCurrentRound(),
-        playerId: player.id,
-        playerCard: card,
-      });
-    }
-  }
-
-  markWord(playerId: string, word: string): MarkResult {
-    if (!this.game) {
-      throw new Error('No game is active');
-    }
-
-    const result = this.game.markWord(playerId, word);
-
-    // Enrich winnerName with screen name
-    if (result.bingo && result.winnerId) {
-      const winner = this.players.get(result.winnerId);
-      if (winner) {
-        result.winnerName = winner.screenName;
-      }
-
-      // Update scores
-      const score = this.scores.get(result.winnerId);
-      if (score) {
-        score.totalPoints += 100;
-        score.roundsWon += 1;
-        score.lastWinRound = this.game.getCurrentRound();
-      }
-
-      // Emit player_won
-      this.emit({
-        type: 'player_won',
-        winnerId: result.winnerId,
-        winnerName: winner?.screenName ?? result.winnerId,
-        pattern: result.pattern!,
-        roundNumber: this.game.getCurrentRound(),
-        timestamp: new Date(),
-      });
-    }
-
-    return result;
-  }
-
-  getGameStatus(): 'waiting' | 'active' | 'finished' | 'no_game' {
-    if (!this.game) return 'no_game';
-    return this.game.getStatus();
+  getGameStatus(): 'no_game' {
+    return 'no_game';
   }
 
   getCurrentRound(): number {
-    if (!this.game) return 0;
-    return this.game.getCurrentRound();
-  }
-
-  getCardForPlayer(playerId: string): BingoCard | null {
-    if (!this.game) return null;
-    return this.game.getCardForPlayer(playerId);
-  }
-
-  getCurrentWinner(): { playerId: string; screenName: string; pattern: WinPattern; roundNumber: number } | null {
-    if (!this.game) return null;
-    const winner = this.game.getCurrentWinner();
-    if (!winner) return null;
-
-    const player = this.players.get(winner.playerId);
-    return {
-      playerId: winner.playerId,
-      screenName: player?.screenName ?? winner.playerId,
-      pattern: winner.pattern,
-      roundNumber: winner.roundNumber,
-    };
+    return 0;
   }
 
   getLeaderboard(): PlayerScore[] {

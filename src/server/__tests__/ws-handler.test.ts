@@ -4,9 +4,12 @@ import { TriviaGame } from '../../core/games/trivia';
 import { Session } from '../../core/session';
 import type { TriviaQuestion } from '../../core/types';
 
-// Generate 24+ unique words for testing
-function makeWords(count = 30): string[] {
-  return Array.from({ length: count }, (_, i) => `word${i + 1}`);
+function makeQuestions(n = 3): TriviaQuestion[] {
+  return Array.from({ length: n }, (_, i) => ({
+    question: `Q${i + 1}?`,
+    a: 'A1', b: 'B1', c: 'C1', d: 'D1',
+    correct: 'A' as const,
+  }));
 }
 
 // Mock WebSocket
@@ -60,7 +63,7 @@ describe('WsHandler', () => {
 
   function connectAdmin(): void {
     handler.handleConnection(adminWs as any);
-    adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
+    adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
   }
 
   function connectAndJoinPlayer(name = 'Alice'): string {
@@ -71,38 +74,16 @@ describe('WsHandler', () => {
   }
 
   describe('create_session', () => {
-    it('creates a session and responds with session_created', () => {
-      handler.handleConnection(adminWs as any);
-      adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
-      const msg = adminWs.lastMessage();
-      expect(msg?.type).toBe('session_created');
-      expect(msg?.sessionId).toBeDefined();
-    });
-
     it('replaces an existing session when called again', () => {
       connectAdmin();
       const first = adminWs.messagesOfType('session_created')[0];
-      adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: makeWords() });
+      adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
       const second = adminWs.messagesOfType('session_created')[1];
       expect(second?.type).toBe('session_created');
       expect(second?.sessionId).not.toBe(first?.sessionId);
     });
 
-    it('returns error if word list is too short', () => {
-      handler.handleConnection(adminWs as any);
-      adminWs.receive({ type: 'create_session', gameMode: 'bingo', words: ['a', 'b', 'c'] });
-      const msg = adminWs.lastMessage();
-      expect(msg?.type).toBe('error');
-    });
-
     describe('trivia', () => {
-      const makeQuestions = (n = 3): TriviaQuestion[] =>
-        Array.from({ length: n }, (_, i) => ({
-          question: `Q${i + 1}?`,
-          a: 'A1', b: 'B1', c: 'C1', d: 'D1',
-          correct: 'A' as const,
-        }));
-
       it('creates a trivia session and responds with session_created', () => {
         handler.handleConnection(adminWs as any);
         adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
@@ -183,95 +164,6 @@ describe('WsHandler', () => {
     });
   });
 
-  describe('start_game', () => {
-    it('starts the game and deals cards to players', () => {
-      connectAdmin();
-      connectAndJoinPlayer('Alice');
-      playerWs.clearSent();
-      adminWs.clearSent();
-
-      adminWs.receive({ type: 'start_game' });
-
-      // Player should receive card_dealt
-      const card = playerWs.messagesOfType('card_dealt')[0];
-      expect(card).toBeDefined();
-      expect(card?.roundNumber).toBe(1);
-      expect(card?.grid).toBeDefined();
-      expect(card?.marked).toBeDefined();
-
-      // Both should receive game_status
-      const adminStatus = adminWs.messagesOfType('game_status')[0];
-      expect(adminStatus?.status).toBe('active');
-      expect(adminStatus?.round).toBe(1);
-    });
-
-    it('returns error if not admin', () => {
-      connectAdmin();
-      connectAndJoinPlayer();
-      playerWs.clearSent();
-      playerWs.receive({ type: 'start_game' });
-      expect(playerWs.lastMessage()?.type).toBe('error');
-    });
-
-    it('returns error if no session', () => {
-      handler.handleConnection(adminWs as any);
-      adminWs.receive({ type: 'start_game' });
-      expect(adminWs.lastMessage()?.type).toBe('error');
-    });
-  });
-
-  describe('mark_word', () => {
-    it('returns mark_result to the player', () => {
-      connectAdmin();
-      connectAndJoinPlayer('Alice');
-      adminWs.receive({ type: 'start_game' });
-
-      // Get a word from the dealt card
-      const card = playerWs.messagesOfType('card_dealt')[0];
-      const grid = card?.grid as string[][];
-      const word = grid[0][0]; // First word on card
-      playerWs.clearSent();
-
-      playerWs.receive({ type: 'mark_word', word });
-      const result = playerWs.messagesOfType('mark_result')[0];
-      expect(result?.type).toBe('mark_result');
-      expect(result?.success).toBe(true);
-      expect(result?.word).toBe(word);
-    });
-
-    it('returns error if not a player', () => {
-      connectAdmin();
-      adminWs.receive({ type: 'mark_word', word: 'test' });
-      const msg = adminWs.lastMessage();
-      expect(msg?.type).toBe('error');
-    });
-  });
-
-  describe('start_new_round', () => {
-    it('starts a new round after a win', () => {
-      connectAdmin();
-      connectAndJoinPlayer('Alice');
-      adminWs.receive({ type: 'start_game' });
-
-      // Mark all words in row 0 to win
-      const card = playerWs.messagesOfType('card_dealt')[0];
-      const grid = card?.grid as string[][];
-      for (let c = 0; c < 5; c++) {
-        playerWs.receive({ type: 'mark_word', word: grid[0][c] });
-      }
-
-      adminWs.clearSent();
-      playerWs.clearSent();
-
-      adminWs.receive({ type: 'start_new_round' });
-
-      // Player should get a new card
-      const newCard = playerWs.messagesOfType('card_dealt')[0];
-      expect(newCard).toBeDefined();
-      expect(newCard?.roundNumber).toBe(2);
-    });
-  });
-
   describe('disconnect', () => {
     it('removes player on close and broadcasts player_left', () => {
       connectAdmin();
@@ -284,15 +176,6 @@ describe('WsHandler', () => {
       expect(leftMsg).toBeDefined();
       expect(leftMsg?.screenName).toBe('Alice');
       expect(leftMsg?.playerCount).toBe(0);
-    });
-  });
-
-  describe('cross-mode rejection (bingo)', () => {
-    it('returns error when trivia command sent to bingo session', () => {
-      connectAdmin();
-      adminWs.clearSent();
-      adminWs.receive({ type: 'go_live' });
-      expect(adminWs.lastMessage()?.type).toBe('error');
     });
   });
 
@@ -588,22 +471,4 @@ describe('WsHandler', () => {
     });
   });
 
-  describe('late joiner', () => {
-    it('gets a card dealt when joining an active game', () => {
-      connectAdmin();
-      const earlyPlayer = new MockWs();
-      handler.handleConnection(earlyPlayer as any);
-      earlyPlayer.receive({ type: 'join', screenName: 'Bob' });
-
-      adminWs.receive({ type: 'start_game' });
-
-      // Now Alice joins late
-      handler.handleConnection(playerWs as any);
-      playerWs.receive({ type: 'join', screenName: 'Alice' });
-
-      const card = playerWs.messagesOfType('card_dealt')[0];
-      expect(card).toBeDefined();
-      expect(card?.roundNumber).toBe(1);
-    });
-  });
 });

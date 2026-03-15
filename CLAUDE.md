@@ -8,12 +8,11 @@ This file describes the codebase structure, development workflows, and conventio
 
 ## Project Overview
 
-**townhall-games** is a real-time multiplayer game platform for town hall meetings. It supports two game modes:
+**townhall-games** is a real-time multiplayer game platform for town hall meetings. The current game mode is:
 
-- **Buzzword Bingo** — Players get unique 5×5 cards and mark off words as they hear them. First to complete a winning pattern wins the round.
 - **Teams Trivia** — Elimination trivia with a 10s countdown per question. Wrong answers (or no answer) eliminate the player. Last survivors win.
 
-The admin selects the game mode when creating a session. All shared infrastructure (relay, session management, WebSocket server, QR join flow) is mode-agnostic.
+Buzzword Bingo is paused; its specification is preserved at `product/bingo-spec.md` for future revival.
 
 ---
 
@@ -39,7 +38,7 @@ Player Browsers ──► Cloud Relay (port 10000) ◄──► Admin Server (po
                                                    + AdminRelayClient
 ```
 
-The relay requires no changes when adding new game modes — it is transport-only.
+The relay is transport-only and game-mode agnostic.
 
 ---
 
@@ -60,17 +59,16 @@ townhall-games/
 │   └── changes/                     # Per-change proposals, designs, tasks (archive/)
 ├── product/
 │   ├── teams-trivia-spec.md         # Full trivia technical spec — authoritative reference
-│   ├── backlog.md                   # Product ideas/backlog
-│   └── words.txt                    # Bingo word list
+│   ├── bingo-spec.md                # Bingo spec preserved for future revival
+│   └── backlog.md                   # Product ideas/backlog
 ├── public/
 │   ├── admin/
-│   │   ├── index.html               # Game mode selector
-│   │   ├── bingo.html               # Bingo setup + controller
+│   │   ├── index.html               # Redirects to /admin/trivia
 │   │   └── trivia.html              # Trivia setup (CSV import) + controller
 │   ├── broadcast/
 │   │   └── trivia.html              # Trivia broadcast screen
 │   ├── play/
-│   │   └── index.html               # Unified player view (mode-aware)
+│   │   └── index.html               # Trivia player view
 │   ├── shared/                      # Compiled JS modules served statically
 │   │   ├── state.js
 │   │   ├── ui.js
@@ -96,15 +94,12 @@ townhall-games/
 │   ├── core/                        # Pure game logic — no I/O dependencies
 │   │   ├── __tests__/
 │   │   ├── games/
-│   │   │   ├── bingo/
-│   │   │   │   ├── bingo-card.ts    # 5×5 card generation, marking, win detection
-│   │   │   │   └── bingo-game.ts    # Multi-round game orchestration
 │   │   │   └── trivia/
 │   │   │       ├── trivia-game.ts   # TriviaGame state machine (6 phases)
 │   │   │       ├── trivia-round.ts  # Per-question answer collection + elimination
 │   │   │       ├── csv-parser.ts    # CSV question import + validation
 │   │   │       └── index.ts         # Re-exports
-│   │   ├── session.ts               # Player roster, scoring, game-mode routing
+│   │   ├── session.ts               # Player roster and event system
 │   │   └── types.ts                 # All shared TypeScript types
 │   ├── relay/                       # Cloud WebSocket relay/multiplexer
 │   │   ├── __tests__/
@@ -122,11 +117,8 @@ townhall-games/
 │   │   ├── http-server.ts           # Static file serving
 │   │   ├── routes.ts                # URL routing (ROUTE_MAP + static asset fallback)
 │   │   └── protocol.ts              # All client↔server message types
-│   ├── fixtures/
-│   │   ├── trivia-questions.csv     # 7 sample questions for demo/test
-│   │   └── bingo-words.ts           # Default bingo word list
-│   ├── demo.ts                      # Local demo harness
-│   └── demo-session.ts              # Demo session helper
+│   └── fixtures/
+│       └── trivia-questions.csv     # Sample questions for demo/test
 ├── package.json
 ├── tsconfig.json                    # Server TypeScript config
 ├── tsconfig.client.json             # Client TypeScript config (outputs to public/shared/)
@@ -164,7 +156,6 @@ npm start                # Unified server (dist/server/index.js)
 npm run start:admin      # Admin server (dist/server/admin-main.js)
 npm run start:relay      # Relay server (dist/relay/relay-main.js)
 npm run dev              # Compile + run relay + admin (uses .env)
-npm run demo             # Compile + run demo harness
 npm run smoke            # Post-deploy smoke test against production relay
 npm run smoke:local      # Smoke test against localhost:10000
 ```
@@ -195,10 +186,9 @@ Tab 4:  /play?session=demo&name=Bob
 
 | URL | Purpose |
 |---|---|
-| `/admin` | Game mode selector |
-| `/admin/bingo` | Bingo setup + live controller |
+| `/admin` | Redirects to `/admin/trivia` |
 | `/admin/trivia` | Trivia setup (CSV import) + live controller |
-| `/play` | Player join — mode-agnostic |
+| `/play` | Trivia player join |
 | `/broadcast/trivia` | Trivia broadcast screen |
 
 ### Query Parameters
@@ -212,13 +202,7 @@ Tab 4:  /play?session=demo&name=Bob
 
 ---
 
-## Game Modes
-
-### Bingo
-
-5×5 card, FREE center square. Admin provides a word list (min 24, recommended 40–60). Players mark words as the admin calls them. Win by completing any row, column, diagonal, or four corners + center. Scores accumulate across rounds (100 points per win).
-
-Key files: `src/core/games/bingo/bingo-card.ts`, `src/core/games/bingo/bingo-game.ts`
+## Game Mode
 
 ### Trivia
 
@@ -238,18 +222,13 @@ No I/O dependencies. All classes are instantiated by the server layer.
 
 ### `types.ts`
 All shared types. Read this first. Key types:
-- `WinPattern` — `horizontal | vertical | diagonal | corners`
-- `MarkResult` — returned when a bingo player marks a word
 - `TriviaState` — `waiting | question_preview | question_live | breakdown | answer_revealed | survivors | game_over`
 - `TriviaQuestion`, `AnswerOption`, `AnswerCounts`, `RoundResult`, `TriviaWinner`
-- `Player`, `PlayerScore`, `Winner`
-- Event types: `GameStartedEvent`, `PlayerWonEvent`, `NewRoundStartedEvent`, `PlayerJoinedEvent`, `PlayerLeftEvent`
+- `Player`, `PlayerScore`
+- Event types: `PlayerJoinedEvent`, `PlayerLeftEvent`
 
 ### `Session` (`session.ts`)
-High-level manager. Holds `gameMode: 'bingo' | 'trivia'` and delegates to the appropriate game class. Manages player roster, cumulative scores, and event listeners.
-
-### `BingoCard` / `BingoGame`
-See `src/core/games/bingo/`. Card center `[2][2]` is always `"FREE"` and pre-marked. `BingoCard.generate(wordList, playerId)` is the static factory.
+Manages player roster and event listeners. Constructor accepts `('trivia', [])` signature.
 
 ### `TriviaGame` / `TriviaRound` / `CsvParser`
 See `src/core/games/trivia/`. `TriviaGame` owns the state machine. `TriviaRound` tracks per-question answers and elimination. `CsvParser` validates and parses CSV uploads (min 3, max 15 questions).
@@ -263,20 +242,16 @@ All messages are JSON. The file defines discriminated union types for all comman
 ### Client → Server (commands)
 
 ```json
-// Bingo
-{ "type": "create_session", "gameMode": "bingo", "words": ["word1", ...] }
-{ "type": "create_session", "gameMode": "trivia", "questions": [...], "speed": false }
-{ "type": "start_game" }
-{ "type": "start_new_round" }
+// Session
+{ "type": "create_session", "questions": [...], "speed": false }
 { "type": "join", "screenName": "Alice" }
-{ "type": "mark_word", "word": "synergy" }
 
-// Trivia — admin
+// Admin
 { "type": "start_trivia_question", "questionIndex": 0 }
 { "type": "go_live" }
 { "type": "advance_question" }
 
-// Trivia — player
+// Player
 { "type": "submit_answer", "answer": "B" }
 { "type": "register_spectator" }
 ```
@@ -286,17 +261,10 @@ All messages are JSON. The file defines discriminated union types for all comman
 ```json
 // Shared
 { "type": "session_created", "sessionId": "..." }
-{ "type": "joined", "playerId": "...", "screenName": "Alice", "gameStatus": "waiting", "round": 1 }
+{ "type": "joined", "playerId": "...", "screenName": "Alice", "gameStatus": "no_game", "round": 0 }
 { "type": "player_joined", "playerId": "...", "screenName": "Carol", "playerCount": 3 }
 { "type": "player_left", "playerId": "...", "screenName": "Dave", "playerCount": 2 }
-{ "type": "game_status", "status": "active", "round": 2 }
 { "type": "error", "message": "..." }
-
-// Bingo
-{ "type": "card_dealt", "roundNumber": 1, "grid": [["word", ...]], "marked": [[false, ...]] }
-{ "type": "mark_result", "success": true, "word": "synergy", "bingo": false, "roundOver": false }
-{ "type": "player_won", "winnerName": "Bob", "pattern": {...}, "roundNumber": 1 }
-{ "type": "leaderboard", "entries": [{ "playerId": "...", "screenName": "Alice", "totalPoints": 100, "roundsWon": 1 }] }
 
 // Trivia — broadcast to all
 { "type": "question_preview", "questionIndex": 0, "text": "..." }
@@ -346,8 +314,6 @@ Transport-only — no game-mode awareness. Admin authenticates with `RELAY_SECRE
 Tests live in `__tests__/` subdirectories next to the source they test. Always run before committing.
 
 ```
-src/core/__tests__/bingo-card.test.ts
-src/core/__tests__/bingo-game.test.ts
 src/core/__tests__/session.test.ts
 src/core/__tests__/trivia-game.test.ts
 src/core/__tests__/trivia-round.test.ts
@@ -401,11 +367,10 @@ When a change is merged, its directory moves to `openspec/changes/archive/` and 
 
 - **TypeScript strict mode** — no `any`, no implicit returns, exhaustive union handling
 - **Discriminated unions** — all protocol messages and game types use a `type` or `envelope` field as discriminant
-- **Factory methods over constructors** — `BingoCard.generate()`, `createWsHandler()`, etc.
+- **Factory methods over constructors** — `createWsHandler()`, `createAdminWsHandler()`, etc.
 - **Pure core layer** — `src/core/` has zero I/O dependencies; all side effects live in `src/server/` and `src/client/`
 - **State machine enforcement** — actions on wrong states are no-ops or return errors; never silently corrupt state
 - **Observer pattern** — `Session.addEventListener()` is the hook for server handlers; don't call server code from core
-- **gameMode branching** — handlers branch on `session.gameMode` at the top level; avoid scattered `if trivia` checks deep in shared logic
 - **No `console.log` in tests** — use `jest.spyOn` to suppress or assert on output
 
 ---

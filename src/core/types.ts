@@ -1,27 +1,3 @@
-export type WinPattern =
-  | { type: 'horizontal'; row: number }
-  | { type: 'vertical'; col: number }
-  | { type: 'diagonal'; direction: 'tl-br' | 'tr-bl' }
-  | { type: 'corners' };
-
-export interface MarkResult {
-  success: boolean;
-  bingo: boolean;
-  pattern?: WinPattern;
-  roundOver: boolean;
-  winnerId?: string;
-  winnerName?: string;
-}
-
-export interface Winner {
-  playerId: string;
-  playerName: string;
-  pattern: WinPattern;
-  roundNumber: number;
-  timestamp: Date;
-  points: 100;
-}
-
 // Session layer types
 
 export interface Player {
@@ -40,29 +16,6 @@ export interface PlayerScore {
 
 // Game events
 
-export interface GameStartedEvent {
-  type: 'game_started';
-  roundNumber: number;
-  playerId: string;
-  playerCard: import('./games/bingo/bingo-card').BingoCard;
-}
-
-export interface PlayerWonEvent {
-  type: 'player_won';
-  winnerId: string;
-  winnerName: string;
-  pattern: WinPattern;
-  roundNumber: number;
-  timestamp: Date;
-}
-
-export interface NewRoundStartedEvent {
-  type: 'new_round_started';
-  roundNumber: number;
-  playerId: string;
-  playerCard: import('./games/bingo/bingo-card').BingoCard;
-}
-
 export interface PlayerJoinedEvent {
   type: 'player_joined';
   playerId: string;
@@ -76,9 +29,6 @@ export interface PlayerLeftEvent {
 }
 
 export type GameEvent =
-  | GameStartedEvent
-  | PlayerWonEvent
-  | NewRoundStartedEvent
   | PlayerJoinedEvent
   | PlayerLeftEvent;
 
