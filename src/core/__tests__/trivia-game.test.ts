@@ -81,10 +81,11 @@ describe('TriviaGame', () => {
       expect(game.state).toBe('answer_revealed');
     });
 
-    it('showSurvivors() → survivors when questions remain', () => {
+    it('showSurvivors() → survivors when questions remain and survivors exist', () => {
       const game = makeGame();
-      game.previewQuestion(0);
+      game.previewQuestion(0); // correct is 'A'
       game.goLive();
+      game.getCurrentRound()!.submitAnswer('alice', 'A'); // at least one survivor
       game.expireTimer();
       game.revealAnswer();
       game.showSurvivors();
@@ -97,6 +98,18 @@ describe('TriviaGame', () => {
       expect(game.state).toBe('survivors');
       game.previewQuestion(1);
       expect(game.state).toBe('question_preview');
+    });
+
+    it('showSurvivors() → game_over when all players eliminated mid-game', () => {
+      const game = makeGame(); // 3 questions remain after Q1
+      game.previewQuestion(0); // correct is 'A'
+      game.goLive();
+      PLAYERS.forEach(p => game.getCurrentRound()!.submitAnswer(p, 'D')); // all wrong
+      game.expireTimer();
+      game.revealAnswer();
+      game.showSurvivors();
+      expect(game.state).toBe('game_over');
+      expect(game.getWinners()).toHaveLength(0);
     });
 
     it('showSurvivors() → game_over when no questions remain', () => {

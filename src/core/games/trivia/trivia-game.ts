@@ -73,7 +73,7 @@ export class TriviaGame {
   showSurvivors(): void {
     this._assertState(['answer_revealed'], 'showSurvivors');
     const moreQuestions = this._currentQuestionIndex < this.questions.length - 1;
-    if (!moreQuestions) {
+    if (!moreQuestions || this._survivorIds.size === 0) {
       this._winners = [...this._survivorIds].map(id => ({ playerId: id, screenName: id }));
       this._state = 'game_over';
     } else {

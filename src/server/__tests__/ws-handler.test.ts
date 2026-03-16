@@ -308,6 +308,7 @@ describe('WsHandler', () => {
       jest.useFakeTimers();
       const game = new TriviaGame('test', QUESTIONS);
       const session = new Session('trivia', []);
+      game.registerPlayers(['survivor']);
       const h = createWsHandler(game, session);
 
       h.handleConnection(adminWs as any);
@@ -316,6 +317,8 @@ describe('WsHandler', () => {
 
       adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
       adminWs.receive({ type: 'go_live' });
+      // Submit correct answer so at least one survivor remains → survivors state, not game_over
+      game.getCurrentRound()!.submitAnswer('survivor', 'A');
       jest.advanceTimersByTime(10000 + 2500);
       adminWs.clearSent();
 
@@ -323,6 +326,39 @@ describe('WsHandler', () => {
       const preview = adminWs.messagesOfType('question_preview')[0];
       expect(preview).toBeDefined();
       expect(preview?.text).toBe('Q2');
+      jest.useRealTimers();
+    });
+
+    it('broadcasts game_over (no winners) and NOT survivors_regrouped when all players eliminated mid-game', () => {
+      jest.useFakeTimers();
+      const game = new TriviaGame('test', QUESTIONS); // 3 questions, so Q1 is not the final
+      const session = new Session('trivia', []);
+      const h = createWsHandler(game, session);
+
+      h.handleConnection(adminWs as any);
+      adminWs.receive({ type: 'go_live' }); // sets adminSocket, errors (wrong state) — ok
+      adminWs.clearSent();
+
+      h.handleConnection(playerWs as any);
+      playerWs.receive({ type: 'join', screenName: 'Alice' });
+      playerWs.clearSent();
+
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.receive({ type: 'go_live' });
+      adminWs.clearSent();
+      playerWs.clearSent();
+
+      // Alice answers wrong — she's the only player, so all players are eliminated
+      playerWs.receive({ type: 'submit_answer', answer: 'D' }); // wrong (correct is A)
+
+      jest.advanceTimersByTime(10000 + 2500);
+
+      const gameOver = adminWs.messagesOfType('game_over');
+      expect(gameOver).toHaveLength(1);
+      expect(gameOver[0].winners).toEqual([]);
+
+      expect(adminWs.messagesOfType('survivors_regrouped')).toHaveLength(0);
+
       jest.useRealTimers();
     });
 

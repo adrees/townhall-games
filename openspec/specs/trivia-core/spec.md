@@ -26,12 +26,16 @@
 - **THEN** `state` SHALL become `answer_revealed`
 
 #### Scenario: Transition to survivors from answer_revealed
-- **WHEN** `showSurvivors()` is called in `answer_revealed` state
+- **WHEN** `showSurvivors()` is called in `answer_revealed` state and at least one survivor remains and more questions remain
 - **THEN** `state` SHALL become `survivors`
 
 #### Scenario: Transition to game_over when no questions remain
 - **WHEN** `showSurvivors()` is called in `answer_revealed` state and there are no more questions
 - **THEN** `state` SHALL become `game_over`
+
+#### Scenario: Transition to game_over when all players are eliminated
+- **WHEN** `showSurvivors()` is called in `answer_revealed` state and the survivor count is zero
+- **THEN** `state` SHALL become `game_over` regardless of whether more questions remain
 
 #### Scenario: Illegal transition is rejected
 - **WHEN** a state-advancing method is called in an incompatible state (e.g., `goLive()` in `waiting`)
