@@ -2,36 +2,41 @@ import { Session } from '../session';
 import type { GameEvent } from '../types';
 
 describe('Session (trivia mode)', () => {
-  it('creates a trivia session without a word list', () => {
-    const session = new Session('trivia', []);
+  it('constructs with no arguments and generates a unique ID', () => {
+    const session = new Session();
     expect(session).toBeDefined();
     expect(session.id).toBeDefined();
-    expect(session.gameMode).toBe('trivia');
+    expect(typeof session.id).toBe('string');
+  });
+
+  it('has no gameMode field', () => {
+    const session = new Session();
+    expect((session as unknown as Record<string, unknown>)['gameMode']).toBeUndefined();
   });
 
   it('generates a unique session ID', () => {
-    const s1 = new Session('trivia', []);
-    const s2 = new Session('trivia', []);
+    const s1 = new Session();
+    const s2 = new Session();
     expect(s1.id).not.toBe(s2.id);
   });
 
   it('starts with no players', () => {
-    const session = new Session('trivia', []);
+    const session = new Session();
     expect(session.getPlayers()).toEqual([]);
   });
 
   it('starts with game status no_game', () => {
-    const session = new Session('trivia', []);
+    const session = new Session();
     expect(session.getGameStatus()).toBe('no_game');
   });
 
   it('returns empty leaderboard with no players', () => {
-    const session = new Session('trivia', []);
+    const session = new Session();
     expect(session.getLeaderboard()).toEqual([]);
   });
 
   it('adds a player and emits player_joined event', () => {
-    const session = new Session('trivia', []);
+    const session = new Session();
     const events: GameEvent[] = [];
     session.addEventListener((e) => events.push(e));
     const player = session.addPlayer('Alice');
@@ -41,20 +46,20 @@ describe('Session (trivia mode)', () => {
   });
 
   it('rejects duplicate screen names (case-insensitive)', () => {
-    const session = new Session('trivia', []);
+    const session = new Session();
     session.addPlayer('Alice');
     expect(() => session.addPlayer('alice')).toThrow(/screen name/i);
     expect(() => session.addPlayer('ALICE')).toThrow(/screen name/i);
   });
 
   it('rejects blank screen names', () => {
-    const session = new Session('trivia', []);
+    const session = new Session();
     expect(() => session.addPlayer('')).toThrow();
     expect(() => session.addPlayer('   ')).toThrow();
   });
 
   it('removes a player and emits player_left event', () => {
-    const session = new Session('trivia', []);
+    const session = new Session();
     const events: GameEvent[] = [];
     const player = session.addPlayer('Alice');
     session.addEventListener((e) => events.push(e));
@@ -65,7 +70,7 @@ describe('Session (trivia mode)', () => {
   });
 
   it('allows reusing a screen name after removal', () => {
-    const session = new Session('trivia', []);
+    const session = new Session();
     const player = session.addPlayer('Alice');
     session.removePlayer(player.id);
     const newPlayer = session.addPlayer('Alice');
@@ -73,7 +78,7 @@ describe('Session (trivia mode)', () => {
   });
 
   it('leaderboard includes joined players with 0 points', () => {
-    const session = new Session('trivia', []);
+    const session = new Session();
     session.addPlayer('Alice');
     session.addPlayer('Bob');
     const board = session.getLeaderboard();

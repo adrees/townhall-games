@@ -12,8 +12,6 @@ This file describes the codebase structure, development workflows, and conventio
 
 - **Teams Trivia** — Elimination trivia with a 10s countdown per question. Wrong answers (or no answer) eliminate the player. Last survivors win.
 
-Buzzword Bingo is paused; its specification is preserved at `product/bingo-spec.md` for future revival.
-
 ---
 
 ## Architecture
@@ -59,7 +57,6 @@ townhall-games/
 │   └── changes/                     # Per-change proposals, designs, tasks (archive/)
 ├── product/
 │   ├── teams-trivia-spec.md         # Full trivia technical spec — authoritative reference
-│   ├── bingo-spec.md                # Bingo spec preserved for future revival
 │   └── backlog.md                   # Product ideas/backlog
 ├── public/
 │   ├── admin/
@@ -114,8 +111,7 @@ townhall-games/
 │   │   ├── admin-ws-handler.ts      # Admin WebSocket handler
 │   │   ├── admin-relay-client.ts    # Admin→relay connection
 │   │   ├── ws-handler.ts            # Player WebSocket handler
-│   │   ├── http-server.ts           # Static file serving
-│   │   ├── routes.ts                # URL routing (ROUTE_MAP + static asset fallback)
+│   │   ├── http-server.ts           # Static file serving + URL routing
 │   │   └── protocol.ts              # All client↔server message types
 │   └── fixtures/
 │       └── trivia-questions.csv     # Sample questions for demo/test

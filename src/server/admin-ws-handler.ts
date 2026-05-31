@@ -113,7 +113,7 @@ export function createAdminWsHandler(relay: RelayTransport, injectedTriviaGame: 
       switch (command.type) {
         case 'create_session': {
           if (session) { sendToAdmin({ type: 'error', message: 'Session already exists' }); return; }
-          session = new Session('trivia', []);
+          session = new Session();
           triviaGame = new TriviaGame(session.id, command.questions, { speedMode: command.speed });
           session.addEventListener(handleSessionEvent);
           sendToAdmin({ type: 'session_created', sessionId: session.id });

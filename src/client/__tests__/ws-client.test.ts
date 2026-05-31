@@ -97,7 +97,7 @@ describe('send', () => {
   it('sends multiple messages in order', () => {
     connect(() => { /* noop */ });
     send({ type: 'join', screenName: 'Alice' });
-    send({ type: 'mark_word', word: 'synergy' });
+    send({ type: 'submit_answer', answer: 'A' });
     expect(MockWebSocket.instances[0].sent.length).toBe(2);
   });
 });

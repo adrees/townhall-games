@@ -89,6 +89,24 @@ describe('named routes — unified role', () => {
   });
 });
 
+describe('/admin/bingo removed', () => {
+  it('GET /admin/bingo → 404 with unified role', () => {
+    const req = makeReq('/admin/bingo');
+    const res = makeRes();
+    handleStaticRequest(req, res, PUBLIC_DIR, 'unified');
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
+  });
+
+  it('GET /admin/bingo → 404 with admin role', () => {
+    const req = makeReq('/admin/bingo');
+    const res = makeRes();
+    handleStaticRequest(req, res, PUBLIC_DIR, 'admin');
+    expect(mockReadFile).not.toHaveBeenCalled();
+    expect(res.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/plain' });
+  });
+});
+
 describe('named routes — role restrictions', () => {
   it('GET /admin with relay role → 404 (not in relay allowlist)', () => {
     const req = makeReq('/admin');

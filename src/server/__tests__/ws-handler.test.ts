@@ -63,7 +63,7 @@ describe('WsHandler', () => {
 
   function connectAdmin(): void {
     handler.handleConnection(adminWs as any);
-    adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
+    adminWs.receive({ type: 'create_session', questions: makeQuestions() });
   }
 
   function connectAndJoinPlayer(name = 'Alice'): string {
@@ -77,7 +77,7 @@ describe('WsHandler', () => {
     it('replaces an existing session when called again', () => {
       connectAdmin();
       const first = adminWs.messagesOfType('session_created')[0];
-      adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
+      adminWs.receive({ type: 'create_session', questions: makeQuestions() });
       const second = adminWs.messagesOfType('session_created')[1];
       expect(second?.type).toBe('session_created');
       expect(second?.sessionId).not.toBe(first?.sessionId);
@@ -86,7 +86,7 @@ describe('WsHandler', () => {
     describe('trivia', () => {
       it('creates a trivia session and responds with session_created', () => {
         handler.handleConnection(adminWs as any);
-        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
+        adminWs.receive({ type: 'create_session', questions: makeQuestions() });
         const msg = adminWs.lastMessage();
         expect(msg?.type).toBe('session_created');
         expect(msg?.sessionId).toBeDefined();
@@ -94,14 +94,14 @@ describe('WsHandler', () => {
 
       it('uses 3-second timer when speed: true', () => {
         handler.handleConnection(adminWs as any);
-        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions(), speed: true });
+        adminWs.receive({ type: 'create_session', questions: makeQuestions(), speed: true });
         expect(adminWs.lastMessage()?.type).toBe('session_created');
         // Speed mode yields a 3s timer — verified indirectly by session creation success
       });
 
       it('creating ws becomes admin socket and receives player_joined broadcasts', () => {
         handler.handleConnection(adminWs as any);
-        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
+        adminWs.receive({ type: 'create_session', questions: makeQuestions() });
         adminWs.clearSent();
 
         handler.handleConnection(playerWs as any);
@@ -114,7 +114,7 @@ describe('WsHandler', () => {
 
       it('admin can send start_trivia_question after trivia create_session', () => {
         handler.handleConnection(adminWs as any);
-        adminWs.receive({ type: 'create_session', gameMode: 'trivia', questions: makeQuestions() });
+        adminWs.receive({ type: 'create_session', questions: makeQuestions() });
         adminWs.clearSent();
 
         adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
@@ -203,7 +203,7 @@ describe('WsHandler', () => {
 
     function makeTriviaHandler() {
       const game = new TriviaGame('test', QUESTIONS);
-      const session = new Session('trivia', []);
+      const session = new Session();
       game.registerPlayers([]);
       const h = createWsHandler(game, session);
       return { handler: h, game, session };
@@ -249,7 +249,7 @@ describe('WsHandler', () => {
     it('submit_answer sends answer_accepted to player and live_answer_stats to admin', () => {
       jest.useFakeTimers();
       const game = new TriviaGame('test', QUESTIONS);
-      const session = new Session('trivia', []);
+      const session = new Session();
       const h = createWsHandler(game, session);
 
       h.handleConnection(adminWs as any);
@@ -281,7 +281,7 @@ describe('WsHandler', () => {
     it('timer expiry broadcasts timer_expired + answer_breakdown, then after delay broadcasts answer_revealed', () => {
       jest.useFakeTimers();
       const game = new TriviaGame('test', QUESTIONS);
-      const session = new Session('trivia', []);
+      const session = new Session();
       const h = createWsHandler(game, session);
 
       h.handleConnection(adminWs as any);
@@ -307,7 +307,7 @@ describe('WsHandler', () => {
     it('advance_question moves to next question_preview', () => {
       jest.useFakeTimers();
       const game = new TriviaGame('test', QUESTIONS);
-      const session = new Session('trivia', []);
+      const session = new Session();
       game.registerPlayers(['survivor']);
       const h = createWsHandler(game, session);
 
@@ -332,7 +332,7 @@ describe('WsHandler', () => {
     it('broadcasts game_over (no winners) and NOT survivors_regrouped when all players eliminated mid-game', () => {
       jest.useFakeTimers();
       const game = new TriviaGame('test', QUESTIONS); // 3 questions, so Q1 is not the final
-      const session = new Session('trivia', []);
+      const session = new Session();
       const h = createWsHandler(game, session);
 
       h.handleConnection(adminWs as any);
@@ -362,12 +362,12 @@ describe('WsHandler', () => {
       jest.useRealTimers();
     });
 
-    it('bingo command (mark_word) on trivia session returns error', () => {
+    it('unrecognised command type returns error', () => {
       const { handler: h } = makeTriviaHandler();
       h.handleConnection(playerWs as any);
       playerWs.receive({ type: 'join', screenName: 'Bob' });
       playerWs.clearSent();
-      playerWs.receive({ type: 'mark_word', word: 'synergy' });
+      playerWs.receive({ type: 'unknown_command' });
       expect(playerWs.lastMessage()?.type).toBe('error');
     });
 
@@ -375,7 +375,7 @@ describe('WsHandler', () => {
       function setupTriviaWithPlayer(screenName: string) {
         jest.useFakeTimers();
         const game = new TriviaGame('test', QUESTIONS);
-        const session = new Session('trivia', []);
+        const session = new Session();
         const h = createWsHandler(game, session);
 
         h.handleConnection(adminWs as any);
@@ -485,7 +485,7 @@ describe('WsHandler', () => {
         { question: 'Q2', a: 'A2', b: 'B2', c: 'C2', d: 'D2', correct: 'B' },
         { question: 'Q3', a: 'A3', b: 'B3', c: 'C3', d: 'D3', correct: 'C' },
       ]);
-      const session = new Session('trivia', []);
+      const session = new Session();
       const h = createWsHandler(game, session);
 
       const spectatorWs = new MockWs();

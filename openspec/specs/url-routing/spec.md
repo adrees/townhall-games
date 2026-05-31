@@ -1,13 +1,13 @@
-### Requirement: Route requests to mode-specific static pages
-The server SHALL map incoming HTTP GET requests to files under `public/` according to a fixed routing table. The routing table SHALL cover: `/admin` → `public/admin/index.html`, `/admin/bingo` → `public/admin/bingo.html`, `/admin/trivia` → `public/admin/trivia.html`, `/play` → `public/play/index.html`, `/broadcast/trivia` → `public/broadcast/trivia.html`. Unmatched paths SHALL return a 404 response.
+### Requirement: Route requests to static pages
+The server SHALL map incoming HTTP GET requests to files under `public/` according to a fixed routing table. The routing table SHALL cover: `/admin` → `public/admin/index.html`, `/admin/trivia` → `public/admin/trivia.html`, `/play` → `public/play/index.html`, `/broadcast/trivia` → `public/broadcast/trivia.html`. Unmatched paths SHALL return a 404 response.
 
 #### Scenario: Admin root resolves to mode selector
 - **WHEN** a GET request arrives for `/admin`
 - **THEN** the server responds with `public/admin/index.html` and status 200
 
-#### Scenario: Bingo admin route resolves correctly
+#### Scenario: /admin/bingo returns 404
 - **WHEN** a GET request arrives for `/admin/bingo`
-- **THEN** the server responds with `public/admin/bingo.html` and status 200
+- **THEN** the server responds with status 404 (route no longer exists)
 
 #### Scenario: Trivia admin route resolves correctly
 - **WHEN** a GET request arrives for `/admin/trivia`

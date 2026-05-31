@@ -98,53 +98,6 @@ button:disabled {
   font-size: 0.9rem;
 }
 
-/* Bingo grid */
-.bingo-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-  margin: 1rem 0;
-  max-width: 500px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.cell {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  background: var(--cell-bg);
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.3rem;
-  font-size: 0.75rem;
-  word-break: break-word;
-  cursor: pointer;
-  transition: all 0.2s;
-  line-height: 1.2;
-}
-
-.cell:hover:not(.marked):not(.free) {
-  background: var(--surface-hover);
-  border-color: var(--primary);
-}
-
-.cell.marked {
-  background: var(--marked);
-  border-color: var(--marked);
-  color: white;
-  font-weight: 600;
-}
-
-.cell.free {
-  background: var(--free);
-  border-color: var(--free);
-  color: white;
-  font-weight: 700;
-  cursor: default;
-}
 
 /* Leaderboard */
 .leaderboard {
@@ -295,9 +248,5 @@ button:disabled {
 
 /* Responsive */
 @media (max-width: 500px) {
-  .cell {
-    font-size: 0.6rem;
-    padding: 0.2rem;
-  }
   h1 { font-size: 1.4rem; }
 }

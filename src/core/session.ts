@@ -8,14 +8,12 @@ import type {
 
 export class Session {
   readonly id: string;
-  readonly gameMode: 'trivia';
   private players: Map<string, Player> = new Map();
   private listeners: EventListener[] = [];
   private scores: Map<string, { totalPoints: number; roundsWon: number; lastWinRound?: number }> = new Map();
 
-  constructor(_gameMode: 'trivia', _wordList: string[]) {
+  constructor() {
     this.id = randomUUID();
-    this.gameMode = 'trivia';
   }
 
   addPlayer(screenName: string): Player {

@@ -206,7 +206,7 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
       triviaGame = null;
       adminSocket = null;
       if (timerHandle) { clearTimeout(timerHandle); timerHandle = null; }
-      session = new Session('trivia', []);
+      session = new Session();
       triviaGame = new TriviaGame(session.id, cmd.questions, { speedMode: cmd.speed });
       session.addEventListener(handleSessionEvent);
       adminSocket = ws;

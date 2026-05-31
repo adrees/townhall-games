@@ -201,7 +201,7 @@ describe('AdminWsHandler', () => {
 
     function makeTriviaHandler() {
       const game = new TriviaGame('test', QUESTIONS);
-      const session = new Session('trivia', []);
+      const session = new Session();
       game.registerPlayers([]);
       const h = createAdminWsHandler(relay, game, session);
       return { handler: h, game, session };
@@ -240,7 +240,7 @@ describe('AdminWsHandler', () => {
     it('player submit_answer sends answer_accepted via sendToPlayer and live_answer_stats to admin', () => {
       jest.useFakeTimers();
       const game = new TriviaGame('test', QUESTIONS);
-      const session = new Session('trivia', []);
+      const session = new Session();
       const h = createAdminWsHandler(relay, game, session);
       h.handleAdminConnection(adminWs as any);
 

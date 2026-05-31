@@ -138,7 +138,7 @@ describe('RelayHandler', () => {
       adminWs.clearSent();
 
       // Player sends a command — should not throw, just silently drop
-      playerWs.receive({ type: 'mark_word', word: 'synergy' });
+      playerWs.receive({ type: 'unknown_command' });
       expect(adminWs.sent).toHaveLength(0);
     });
   });

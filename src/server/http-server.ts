@@ -19,7 +19,6 @@ interface NamedRoute {
 // Named routes: URL → { file relative to publicDir, allowed roles }
 const NAMED_ROUTES: Record<string, NamedRoute> = {
   '/admin':             { file: 'admin/index.html',    roles: ['unified', 'admin'] },
-  '/admin/bingo':       { file: 'admin/bingo.html',    roles: ['unified', 'admin'] },
   '/admin/trivia':      { file: 'admin/trivia.html',   roles: ['unified', 'admin'] },
   '/play':              { file: 'play/index.html',     roles: ['unified', 'relay'] },
   '/broadcast/trivia':  { file: 'broadcast/trivia.html', roles: ['unified', 'relay'] },
