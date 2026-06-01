@@ -139,6 +139,10 @@ export function createAdminWsHandler(relay: RelayTransport, injectedTriviaGame: 
         }
         case 'go_live': {
           if (!triviaGame) { sendToAdmin({ type: 'error', message: 'No trivia game configured' }); return; }
+          if (triviaGame.getSurvivors().length === 0) {
+            const playerIds = [...connectionToPlayer.values()].map(info => info.playerId);
+            triviaGame.registerPlayers(playerIds);
+          }
           triviaGame.goLive();
           const q = triviaGame.getCurrentQuestion()!;
           broadcastToAll({ type: 'question_live', text: q.question, options: [q.a, q.b, q.c, q.d], timeLimit: triviaGame.questionTimeLimitMs / 1000 });

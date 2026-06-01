@@ -311,6 +311,32 @@ describe('AdminWsHandler', () => {
       jest.useRealTimers();
     });
 
+    it('go_live registers joined players so they appear as survivors when correct', () => {
+      jest.useFakeTimers();
+      const game = new TriviaGame('test', QUESTIONS);
+      const session = new Session();
+      const h = createAdminWsHandler(relay, game, session);
+      h.handleAdminConnection(adminWs as any);
+
+      h.handlePlayerCommand('conn-1', JSON.stringify({ type: 'join', screenName: 'Alice' }));
+      const joinedMsg = relay.lastSentTo('conn-1');
+      const playerId = joinedMsg?.playerId as string;
+      // No manual registerPlayers — go_live should auto-register
+
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.receive({ type: 'go_live' });
+      relay.clearAll(); adminWs.clearSent();
+
+      h.handlePlayerCommand('conn-1', JSON.stringify({ type: 'submit_answer', answer: 'A' }));
+      jest.advanceTimersByTime(10000); // timer_expired
+      jest.advanceTimersByTime(2500);  // reveal
+
+      const revealed = relay.broadcastsOfType('answer_revealed')[0];
+      expect(revealed?.survivors).toContain(playerId);
+      expect(revealed?.eliminated).toHaveLength(0);
+      jest.useRealTimers();
+    });
+
     it('timer expiry + reveal sequence broadcasts via relay', () => {
       jest.useFakeTimers();
       const { handler: h } = makeTriviaHandler();
