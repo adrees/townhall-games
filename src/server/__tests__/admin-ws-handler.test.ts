@@ -164,10 +164,16 @@ describe('AdminWsHandler', () => {
       expect(relay.broadcastsOfType('session_created')).toHaveLength(1);
     });
 
-    it('returns error if session already exists', () => {
+    it('replaces existing session and broadcasts game_reset then session_created', () => {
       connectAdmin();
+      relay.clearAll();
+      adminWs.clearSent();
+
       adminWs.receive({ type: 'create_session', questions: makeQuestions() });
-      expect(adminWs.lastMessage()?.type).toBe('error');
+
+      expect(relay.broadcastsOfType('game_reset')).toHaveLength(1);
+      expect(relay.broadcastsOfType('session_created')).toHaveLength(1);
+      expect(adminWs.lastMessage()?.type).toBe('session_created');
     });
 
     it('uses 3-second timer when speed: true', () => {

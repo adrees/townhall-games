@@ -147,6 +147,18 @@ describe('WsHandler', () => {
       expect(second?.sessionId).not.toBe(first?.sessionId);
     });
 
+    it('broadcasts game_reset to players when replacing an existing session', () => {
+      connectAdmin();
+      handler.handleConnection(playerWs as any);
+      playerWs.receive({ type: 'join', screenName: 'Alice' });
+      playerWs.clearSent();
+
+      adminWs.receive({ type: 'create_session', questions: makeQuestions() });
+
+      expect(playerWs.messagesOfType('game_reset')).toHaveLength(1);
+      expect(playerWs.messagesOfType('session_created')).toHaveLength(1);
+    });
+
     describe('trivia', () => {
       it('creates a trivia session and responds with session_created', () => {
         handler.handleConnection(adminWs as any);

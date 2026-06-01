@@ -122,7 +122,14 @@ export function createAdminWsHandler(relay: RelayTransport, injectedTriviaGame: 
           break;
         }
         case 'create_session': {
-          if (session) { sendToAdmin({ type: 'error', message: 'Session already exists' }); return; }
+          if (session) {
+            if (timerHandle) { clearTimeout(timerHandle); timerHandle = null; }
+            relay.broadcastToPlayers(serializeEvent({ type: 'game_reset' }));
+            connectionToPlayer.clear();
+            playerToConnection.clear();
+            session = null;
+            triviaGame = null;
+          }
           session = new Session();
           triviaGame = new TriviaGame(session.id, command.questions, { speedMode: command.speed });
           session.addEventListener(handleSessionEvent);

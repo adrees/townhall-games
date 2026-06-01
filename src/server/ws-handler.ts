@@ -224,6 +224,12 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
     }
 
     if (cmd.type === 'create_session') {
+      if (session) {
+        if (timerHandle) { clearTimeout(timerHandle); timerHandle = null; }
+        broadcastToNonAdmin({ type: 'game_reset' });
+        socketToPlayer.clear();
+        playerToSocket.clear();
+      }
       session = null;
       triviaGame = null;
       adminSocket = null;
