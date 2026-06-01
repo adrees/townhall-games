@@ -1,7 +1,7 @@
 import { connect, send } from './ws-client.js';
 import { handleMessage } from './handlers.js';
 import { showNotification } from './ui.js';
-import { triviaHandlers, initAnswerButtons } from './trivia-handlers.js';
+import { triviaHandlers, initAnswerButtons, initRejoinButton } from './trivia-handlers.js';
 
 // --- Join form -----------------------------------------------------------
 
@@ -48,3 +48,4 @@ const autoJoinName = getAutoJoinName();
 connect(combinedHandler, autoJoinName ? () => joinGame(autoJoinName) : undefined);
 
 initAnswerButtons();
+initRejoinButton();

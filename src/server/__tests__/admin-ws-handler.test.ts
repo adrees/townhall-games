@@ -107,6 +107,48 @@ describe('AdminWsHandler', () => {
     handler.handlePlayerCommand(connectionId, JSON.stringify({ type: 'join', screenName }));
   }
 
+  describe('restart_game', () => {
+    it('broadcasts game_reset to all players via relay', () => {
+      connectAdmin();
+      relay.clearAll();
+
+      adminWs.receive({ type: 'restart_game' });
+
+      expect(relay.broadcastsOfType('game_reset')).toHaveLength(1);
+    });
+
+    it('is a no-op when no session exists', () => {
+      handler.handleAdminConnection(adminWs as any);
+      relay.clearAll();
+
+      adminWs.receive({ type: 'restart_game' });
+
+      expect(relay.broadcasts).toHaveLength(0);
+      expect(adminWs.lastMessage()).toBeNull();
+    });
+
+    it('allows create_session after restart', () => {
+      connectAdmin();
+      adminWs.receive({ type: 'restart_game' });
+      relay.clearAll();
+      adminWs.clearSent();
+
+      adminWs.receive({ type: 'create_session', questions: makeQuestions() });
+
+      expect(adminWs.lastMessage()?.type).toBe('session_created');
+    });
+
+    it('broadcasts session_created to players via relay after new create_session', () => {
+      connectAdmin();
+      adminWs.receive({ type: 'restart_game' });
+      relay.clearAll();
+
+      adminWs.receive({ type: 'create_session', questions: makeQuestions() });
+
+      expect(relay.broadcastsOfType('session_created')).toHaveLength(1);
+    });
+  });
+
   describe('create_session', () => {
     it('creates a trivia session and responds with session_created', () => {
       handler.handleAdminConnection(adminWs as any);
@@ -114,6 +156,12 @@ describe('AdminWsHandler', () => {
       const msg = adminWs.lastMessage();
       expect(msg?.type).toBe('session_created');
       expect(msg?.sessionId).toBeDefined();
+    });
+
+    it('broadcasts session_created to players via relay', () => {
+      handler.handleAdminConnection(adminWs as any);
+      adminWs.receive({ type: 'create_session', questions: makeQuestions() });
+      expect(relay.broadcastsOfType('session_created')).toHaveLength(1);
     });
 
     it('returns error if session already exists', () => {

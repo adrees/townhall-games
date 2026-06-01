@@ -20,6 +20,7 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
   const socketToPlayer = new Map<WebSocket, PlayerInfo>();
   const playerToSocket = new Map<string, WebSocket>();
   const spectatorSockets = new Set<WebSocket>();
+  const allConnectedSockets = new Set<WebSocket>();
   let timerHandle: ReturnType<typeof setTimeout> | null = null;
 
   function send(ws: WebSocket, event: ServerEvent): void {
@@ -53,6 +54,16 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
 
   function sendToAdmin(event: ServerEvent): void {
     if (adminSocket) send(adminSocket, event);
+  }
+
+  function broadcastToNonAdmin(event: ServerEvent): void {
+    const data = serializeEvent(event);
+    for (const socket of allConnectedSockets) {
+      if (socket === adminSocket) continue;
+      try {
+        if (socket.readyState === socket.OPEN) socket.send(data);
+      } catch { /* swallow */ }
+    }
   }
 
   function handleSessionEvent(event: GameEvent): void {
@@ -201,6 +212,17 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
       return;
     }
 
+    if (cmd.type === 'restart_game') {
+      if (!session) return;
+      if (timerHandle) { clearTimeout(timerHandle); timerHandle = null; }
+      broadcastToNonAdmin({ type: 'game_reset' });
+      socketToPlayer.clear();
+      playerToSocket.clear();
+      session = null;
+      triviaGame = null;
+      return;
+    }
+
     if (cmd.type === 'create_session') {
       session = null;
       triviaGame = null;
@@ -211,6 +233,7 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
       session.addEventListener(handleSessionEvent);
       adminSocket = ws;
       send(ws, { type: 'session_created', sessionId: session.id });
+      broadcastToNonAdmin({ type: 'session_created', sessionId: session.id });
       return;
     }
 
@@ -236,6 +259,7 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
   }
 
   function handleClose(ws: WebSocket): void {
+    allConnectedSockets.delete(ws);
     const info = socketToPlayer.get(ws);
     if (info && session) {
       session.removePlayer(info.playerId);
@@ -248,6 +272,7 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
 
   return {
     handleConnection(ws: WebSocket): void {
+      allConnectedSockets.add(ws);
       ws.on('message', (data: WebSocket.RawData) => handleMessage(ws, data.toString()));
       ws.on('close', () => handleClose(ws));
     },

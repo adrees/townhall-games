@@ -26,6 +26,7 @@ const questionQueue = document.getElementById('questionQueue');
 const previewBtn = document.getElementById('previewBtn');
 const goLiveBtn = document.getElementById('goLiveBtn');
 const advanceBtn = document.getElementById('advanceBtn');
+const restartBtn = document.getElementById('restartBtn');
 const statsPanel = document.getElementById('statsPanel');
 const resultPanel = document.getElementById('resultPanel');
 const debugPanel = document.getElementById('debugPanel');
@@ -238,6 +239,20 @@ function onQuestionResult(msg) {
     // Enable Advance if there's a next question
     advanceBtn.disabled = currentQuestionIndex + 1 >= questions.length;
 }
+
+// ── Restart Game ─────────────────────────────────────────────────────────────
+restartBtn.addEventListener('click', () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'restart_game' }));
+    sessionCreated = false;
+    currentQuestionIndex = -1;
+    controllerSection.classList.add('hidden');
+    setupSection.classList.remove('hidden');
+    statsPanel.classList.add('hidden');
+    resultPanel.classList.add('hidden');
+    goLiveBtn.disabled = true;
+    advanceBtn.disabled = true;
+});
 
 // ── Start ────────────────────────────────────────────────────────────────────
 connect();

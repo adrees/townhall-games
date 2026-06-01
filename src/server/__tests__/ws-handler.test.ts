@@ -73,6 +73,70 @@ describe('WsHandler', () => {
     return joined?.playerId as string;
   }
 
+  describe('restart_game', () => {
+    it('broadcasts game_reset to all connected player sockets', () => {
+      connectAdmin();
+      handler.handleConnection(playerWs as any);
+      playerWs.receive({ type: 'join', screenName: 'Alice' });
+      playerWs.clearSent();
+
+      adminWs.receive({ type: 'restart_game' });
+
+      expect(playerWs.messagesOfType('game_reset')).toHaveLength(1);
+    });
+
+    it('does not send game_reset to admin socket', () => {
+      connectAdmin();
+      adminWs.clearSent();
+
+      adminWs.receive({ type: 'restart_game' });
+
+      expect(adminWs.messagesOfType('game_reset')).toHaveLength(0);
+    });
+
+    it('is a no-op when no session exists', () => {
+      handler.handleConnection(adminWs as any);
+      adminWs.receive({ type: 'restart_game' });
+      expect(adminWs.lastMessage()).toBeNull();
+    });
+
+    it('cancels a running timer so it does not fire after restart', () => {
+      jest.useFakeTimers();
+      const game = new TriviaGame('test', makeQuestions());
+      const session = new Session();
+      const h = createWsHandler(game, session);
+
+      h.handleConnection(adminWs as any);
+      adminWs.receive({ type: 'go_live' }); // sets adminSocket
+      adminWs.receive({ type: 'start_trivia_question', questionIndex: 0 });
+      adminWs.receive({ type: 'go_live' });
+      adminWs.clearSent();
+
+      adminWs.receive({ type: 'restart_game' });
+      jest.advanceTimersByTime(15000); // past both timer and reveal delay
+
+      expect(adminWs.messagesOfType('timer_expired')).toHaveLength(0);
+      expect(adminWs.messagesOfType('answer_revealed')).toHaveLength(0);
+      jest.useRealTimers();
+    });
+
+    it('allows create_session after restart and broadcasts session_created to player sockets', () => {
+      connectAdmin();
+      handler.handleConnection(playerWs as any);
+      playerWs.receive({ type: 'join', screenName: 'Alice' });
+      playerWs.clearSent();
+      adminWs.clearSent();
+
+      adminWs.receive({ type: 'restart_game' });
+      playerWs.clearSent();
+
+      adminWs.receive({ type: 'create_session', questions: makeQuestions() });
+
+      expect(adminWs.messagesOfType('session_created')).toHaveLength(1);
+      expect(playerWs.messagesOfType('session_created')).toHaveLength(1);
+    });
+  });
+
   describe('create_session', () => {
     it('replaces an existing session when called again', () => {
       connectAdmin();

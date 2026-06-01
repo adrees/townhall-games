@@ -1,10 +1,12 @@
 import { send } from './ws-client.js';
 import { show, hide, showNotification } from './ui.js';
+import { state } from './state.js';
 
 type Msg = { type: string; [key: string]: unknown };
 
 let countdownInterval: ReturnType<typeof setInterval> | null = null;
 let eliminated = false;
+let screenName = '';
 
 function showTriviaOnly(sectionId: string): void {
   hide('waitingSection');
@@ -17,6 +19,36 @@ function showTriviaOnly(sectionId: string): void {
 }
 
 export const triviaHandlers: Record<string, (msg: Msg) => void> = {
+  joined(msg: Msg): void {
+    screenName = msg.screenName as string;
+    state.playerId = msg.playerId as string;
+    hide('joinSection');
+    show('waitingSection');
+  },
+
+  game_reset(_msg: Msg): void {
+    if (countdownInterval !== null) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    hide('joinSection');
+    hide('waitingSection');
+    hide('triviaSection');
+    show('rejoinSection');
+    const rejoinBtn = document.getElementById('rejoinBtn') as HTMLButtonElement;
+    if (rejoinBtn) rejoinBtn.disabled = true;
+    const rejoinMsg = document.getElementById('rejoinMessage');
+    if (rejoinMsg) rejoinMsg.textContent = 'Waiting for next game...';
+  },
+
+  session_created(_msg: Msg): void {
+    if (!screenName) return;
+    const rejoinBtn = document.getElementById('rejoinBtn') as HTMLButtonElement;
+    if (rejoinBtn) rejoinBtn.disabled = false;
+    const rejoinMsg = document.getElementById('rejoinMessage');
+    if (rejoinMsg) rejoinMsg.textContent = 'New game ready!';
+  },
+
   question_preview(_msg: Msg): void {
     eliminated = false;
     showTriviaOnly('triviaWaiting');
@@ -119,6 +151,16 @@ export const triviaHandlers: Record<string, (msg: Msg) => void> = {
     showTriviaOnly('triviaOutcome');
   },
 };
+
+// Register rejoin button click handler
+export function initRejoinButton(): void {
+  const rejoinBtn = document.getElementById('rejoinBtn');
+  if (!rejoinBtn) return;
+  rejoinBtn.addEventListener('click', () => {
+    if (!screenName) return;
+    window.location.href = '/play?name=' + encodeURIComponent(screenName);
+  });
+}
 
 // Register answer button click handler
 export function initAnswerButtons(): void {

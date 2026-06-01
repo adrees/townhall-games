@@ -35,6 +35,10 @@ export interface RegisterSpectatorCommand {
   type: 'register_spectator';
 }
 
+export interface RestartGameCommand {
+  type: 'restart_game';
+}
+
 export type Command =
   | CreateSessionCommand
   | JoinCommand
@@ -42,7 +46,8 @@ export type Command =
   | GoLiveCommand
   | AdvanceQuestionCommand
   | SubmitAnswerCommand
-  | RegisterSpectatorCommand;
+  | RegisterSpectatorCommand
+  | RestartGameCommand;
 
 // Server → Client events
 
@@ -160,6 +165,10 @@ export interface LeaderboardEvent {
   entries: PlayerScore[];
 }
 
+export interface GameResetEvent {
+  type: 'game_reset';
+}
+
 export type ServerEvent =
   | SessionCreatedEvent
   | JoinedEvent
@@ -179,7 +188,8 @@ export type ServerEvent =
   | AnswerAcceptedEvent
   | LiveAnswerStatsEvent
   | QuestionResultEvent
-  | LeaderboardEvent;
+  | LeaderboardEvent
+  | GameResetEvent;
 
 const VALID_ANSWER_OPTIONS = new Set<string>(['A', 'B', 'C', 'D']);
 
@@ -191,6 +201,7 @@ const COMMAND_TYPES = new Set([
   'advance_question',
   'submit_answer',
   'register_spectator',
+  'restart_game',
 ]);
 
 export function parseCommand(raw: string): Command | null {
@@ -248,6 +259,9 @@ export function parseCommand(raw: string): Command | null {
 
     case 'register_spectator':
       return { type: 'register_spectator' };
+
+    case 'restart_game':
+      return { type: 'restart_game' };
 
     default:
       return null;

@@ -224,7 +224,7 @@ All shared types. Read this first. Key types:
 - Event types: `PlayerJoinedEvent`, `PlayerLeftEvent`
 
 ### `Session` (`session.ts`)
-Manages player roster and event listeners. Constructor accepts `('trivia', [])` signature.
+Manages player roster and event listeners. Constructor takes no arguments.
 
 ### `TriviaGame` / `TriviaRound` / `CsvParser`
 See `src/core/games/trivia/`. `TriviaGame` owns the state machine. `TriviaRound` tracks per-question answers and elimination. `CsvParser` validates and parses CSV uploads (min 3, max 15 questions).
@@ -246,6 +246,7 @@ All messages are JSON. The file defines discriminated union types for all comman
 { "type": "start_trivia_question", "questionIndex": 0 }
 { "type": "go_live" }
 { "type": "advance_question" }
+{ "type": "restart_game" }
 
 // Player
 { "type": "submit_answer", "answer": "B" }
@@ -257,6 +258,7 @@ All messages are JSON. The file defines discriminated union types for all comman
 ```json
 // Shared
 { "type": "session_created", "sessionId": "..." }
+{ "type": "game_reset" }
 { "type": "joined", "playerId": "...", "screenName": "Alice", "gameStatus": "no_game", "round": 0 }
 { "type": "player_joined", "playerId": "...", "screenName": "Carol", "playerCount": 3 }
 { "type": "player_left", "playerId": "...", "screenName": "Dave", "playerCount": 2 }
@@ -280,6 +282,8 @@ All messages are JSON. The file defines discriminated union types for all comman
 { "type": "live_answer_stats", "counts": {"A":1,"B":2,"C":0,"D":0}, "answered": 3, "remaining": 17 }
 { "type": "question_result", "correct": "B", "eliminated": [...], "survivors": [...] }
 ```
+
+`session_created` is broadcast to all connected clients (not just admin) so player UIs can enable a rejoin affordance. `game_reset` is broadcast to all non-admin clients when admin triggers a restart.
 
 ---
 

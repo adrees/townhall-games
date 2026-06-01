@@ -1,7 +1,9 @@
 import { send } from './ws-client.js';
 import { show, hide, showNotification } from './ui.js';
+import { state } from './state.js';
 let countdownInterval = null;
 let eliminated = false;
+let screenName = '';
 function showTriviaOnly(sectionId) {
     hide('waitingSection');
     hide('triviaWaiting');
@@ -12,6 +14,38 @@ function showTriviaOnly(sectionId) {
     show(sectionId);
 }
 export const triviaHandlers = {
+    joined(msg) {
+        screenName = msg.screenName;
+        state.playerId = msg.playerId;
+        hide('joinSection');
+        show('waitingSection');
+    },
+    game_reset(_msg) {
+        if (countdownInterval !== null) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+        hide('joinSection');
+        hide('waitingSection');
+        hide('triviaSection');
+        show('rejoinSection');
+        const rejoinBtn = document.getElementById('rejoinBtn');
+        if (rejoinBtn)
+            rejoinBtn.disabled = true;
+        const rejoinMsg = document.getElementById('rejoinMessage');
+        if (rejoinMsg)
+            rejoinMsg.textContent = 'Waiting for next game...';
+    },
+    session_created(_msg) {
+        if (!screenName)
+            return;
+        const rejoinBtn = document.getElementById('rejoinBtn');
+        if (rejoinBtn)
+            rejoinBtn.disabled = false;
+        const rejoinMsg = document.getElementById('rejoinMessage');
+        if (rejoinMsg)
+            rejoinMsg.textContent = 'New game ready!';
+    },
     question_preview(_msg) {
         eliminated = false;
         showTriviaOnly('triviaWaiting');
@@ -101,6 +135,17 @@ export const triviaHandlers = {
         showTriviaOnly('triviaOutcome');
     },
 };
+// Register rejoin button click handler
+export function initRejoinButton() {
+    const rejoinBtn = document.getElementById('rejoinBtn');
+    if (!rejoinBtn)
+        return;
+    rejoinBtn.addEventListener('click', () => {
+        if (!screenName)
+            return;
+        window.location.href = '/play?name=' + encodeURIComponent(screenName);
+    });
+}
 // Register answer button click handler
 export function initAnswerButtons() {
     const container = document.getElementById('answerButtons');
