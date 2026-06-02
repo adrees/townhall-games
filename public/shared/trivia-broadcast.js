@@ -125,6 +125,25 @@ function createNameSpan(screenName, container, fontSize = 18) {
     return span;
 }
 
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function resetToLobby() {
+    if (countdownInterval !== null) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+    for (const span of playerSpans.values()) span.remove();
+    playerSpans.clear();
+    survivorCloud.innerHTML = '';
+    wordCloud.innerHTML = '';
+    playerCount = 0;
+    currentQuestionText = '';
+    eliminationAnimating = false;
+    pendingSurvivors = null;
+    pendingGameOver = null;
+    playerCountLabel.textContent = 'Waiting for players...';
+    setPhase('lobby');
+}
+
 // ── Event handlers ────────────────────────────────────────────────────────────
 
 function onPlayerJoined(msg) {
@@ -254,6 +273,8 @@ function onGameOver(msg) {
 function handleMessage(msg) {
     updateDebug(msg);
     switch (msg.type) {
+        case 'game_reset':           resetToLobby();             break;
+        case 'session_created':      resetToLobby();             break;
         case 'player_joined':        onPlayerJoined(msg);        break;
         case 'player_left':          onPlayerLeft(msg);          break;
         case 'question_live':        onQuestionLive(msg);        break;
