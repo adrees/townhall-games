@@ -117,9 +117,10 @@ export function createWsHandler(injectedTriviaGame: TriviaGame | null = null, in
     const counts = round.getAnswerCounts();
     const totalAnswered = counts.A + counts.B + counts.C + counts.D;
     const totalPlayers = triviaGame.getSurvivors().length;
+    const playerAnswers = round.getPlayerAnswers();
 
     broadcast({ type: 'timer_expired' });
-    broadcast({ type: 'answer_breakdown', counts, totalAnswered, totalPlayers });
+    broadcast({ type: 'answer_breakdown', counts, totalAnswered, totalPlayers, playerAnswers });
 
     timerHandle = setTimeout(onReveal, TriviaGame.REVEAL_DELAY_MS);
   }

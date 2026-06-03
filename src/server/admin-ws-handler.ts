@@ -96,9 +96,10 @@ export function createAdminWsHandler(relay: RelayTransport, injectedTriviaGame: 
     const counts = round.getAnswerCounts();
     const totalAnswered = counts.A + counts.B + counts.C + counts.D;
     const totalPlayers = triviaGame.getSurvivors().length;
+    const playerAnswers = round.getPlayerAnswers();
 
     broadcastToAll({ type: 'timer_expired' });
-    broadcastToAll({ type: 'answer_breakdown', counts, totalAnswered, totalPlayers });
+    broadcastToAll({ type: 'answer_breakdown', counts, totalAnswered, totalPlayers, playerAnswers });
 
     timerHandle = setTimeout(onReveal, TriviaGame.REVEAL_DELAY_MS);
   }

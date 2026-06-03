@@ -25,6 +25,10 @@ export class TriviaRound {
     this.closed = true;
   }
 
+  getPlayerAnswers(): Record<string, AnswerOption> {
+    return Object.fromEntries(this.answers);
+  }
+
   resolve(): RoundResult {
     if (!this.closed) {
       throw new Error('Cannot resolve an open round — call close() first');
@@ -48,6 +52,7 @@ export class TriviaRound {
       eliminated,
       survivors,
       counts: this.getAnswerCounts(),
+      playerAnswers: this.getPlayerAnswers(),
     };
 
     return this.result;

@@ -111,6 +111,7 @@ export interface AnswerBreakdownEvent {
   counts: { A: number; B: number; C: number; D: number };
   totalAnswered: number;
   totalPlayers: number;
+  playerAnswers: Record<string, string>;
 }
 
 export interface AnswerRevealedEvent {

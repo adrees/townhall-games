@@ -3,325 +3,464 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teams Trivia - Broadcast</title>
-  <link rel="stylesheet" href="/style.css">
+  <title>Teams Trivia — Broadcast</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    /* ── Phase switching ────────────────────────────────────────────────── */
-    #lobbySection,
-    #eliminationSection,
-    #questionSection,
-    #breakdownSection,
-    #survivorSection,
-    #winnerSection { display: none; }
-
-    body[data-phase="lobby"]       #lobbySection       { display: flex; }
-    body[data-phase="elimination"] #eliminationSection { display: flex; }
-    body[data-phase="question"]    #questionSection    { display: flex; }
-    body[data-phase="breakdown"]   #breakdownSection   { display: flex; }
-    body[data-phase="survivor"]    #survivorSection    { display: flex; }
-    body[data-phase="winner"]      #winnerSection      { display: flex; }
-
-    /* ── Word cloud visibility ──────────────────────────────────────────── */
-    #wordCloud { display: none; }
-    body[data-phase="lobby"]       #wordCloud { display: block; }
-    body[data-phase="elimination"] #wordCloud { display: block; }
-
-    /* ── Shared layout ──────────────────────────────────────────────────── */
-    .phase-root {
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      min-height: 80vh;
-      padding: 20px;
-      box-sizing: border-box;
+    :root {
+      --bg:          #1B2338;
+      --bg-panel:    #141C2D;
+      --bg-card:     #202C42;
+      --answer-a:    #F7B733;
+      --answer-b:    #F0722A;
+      --answer-c:    #2EC4B5;
+      --answer-d:    #6BC96E;
+      --active:      #3ECFBE;
+      --eliminated:  #2A3549;
+      --elim-text:   #3D4F6B;
+      --text:        #EDF0F7;
+      --text-muted:  #7B8FB0;
+      --divider:     #243050;
     }
 
-    /* ── Word clouds ────────────────────────────────────────────────────── */
-    #wordCloud {
-      position: relative;
-      width: 100%;
-      height: 60vh;
-      overflow: hidden;
-      border-radius: 8px;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    #survivorCloud {
-      position: relative;
-      width: 100%;
-      height: 60vh;
-      overflow: hidden;
-      border-radius: 8px;
-    }
-
-    .player-name {
-      position: absolute;
-      font-weight: bold;
-      font-size: 18px;
-      color: #2c3e50;
-      white-space: nowrap;
-      transition: transform 0.8s ease-out, font-size 0.6s ease, opacity 0.4s ease;
-      pointer-events: none;
-      user-select: none;
-    }
-
-    .player-name.eliminated {
-      transform: translateY(200px) !important;
-      opacity: 0;
-    }
-
-    #playerCountLabel {
-      font-size: 18px;
-      color: #666;
-      margin-top: 10px;
-    }
-
-    /* ── Question ───────────────────────────────────────────────────────── */
-    #questionText {
-      font-size: clamp(24px, 4vw, 48px);
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 30px;
-      max-width: 900px;
-    }
-
-    #answerLabels {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      width: 100%;
-      max-width: 700px;
-      margin-bottom: 30px;
-    }
-
-    .answer-label {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      background: #e8f4fd;
-      border: 3px solid #3498db;
-      border-radius: 10px;
-      padding: 12px 20px;
-    }
-
-    .answer-letter {
-      width: 48px;
-      height: 48px;
+    html, body {
+      width: 100%; height: 100%;
+      background: #0E1525;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 50%;
-      background: #3498db;
-      font-size: 24px;
-      font-weight: bold;
-      color: #fff;
+      overflow: hidden;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    /* ── 16:9 stage ─────────────────────────────────────────────────────── */
+    #stage {
+      width: 100vw;
+      height: 56.25vw; /* 16:9 */
+      max-height: 100vh;
+      max-width: 177.78vh; /* 16:9 inverse */
+      background: var(--bg);
+      display: grid;
+      grid-template-rows: 1fr 2fr;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── Header (top 1/3) ───────────────────────────────────────────────── */
+    #header {
+      border-bottom: 2px solid var(--divider);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 2vw;
+      padding: 0 3vw;
+      position: relative;
+    }
+
+    /* logo mark */
+    #logoMark {
+      height: 5vh;
+      width: auto;
       flex-shrink: 0;
     }
 
-    .answer-text {
-      font-size: clamp(18px, 2.5vw, 28px);
-      font-weight: bold;
-      color: #2c3e50;
+    /* centre content — switches by phase */
+    #headerCenter {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.4vh;
     }
 
+    #gameTitle {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(18px, 2.8vh, 40px);
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    #headerSub {
+      font-size: clamp(11px, 1.6vh, 22px);
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* right — question display / correct answer reveal */
+    #headerRight {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.5vh;
+    }
+
+    #playerCountBadge {
+      font-size: clamp(11px, 1.5vh, 20px);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* correct answer reveal (survivor phase) */
+    #correctReveal {
+      display: none;
+      align-items: center;
+      gap: 1vw;
+      background: var(--bg-card);
+      border-radius: 1vh;
+      padding: 0.8vh 1.5vw;
+      border: 1px solid var(--divider);
+    }
+    #correctReveal.visible { display: flex; }
+
+    #correctLetter {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(16px, 3.5vh, 52px);
+      font-weight: 800;
+      line-height: 1;
+    }
+    #correctText {
+      font-size: clamp(10px, 1.6vh, 22px);
+      font-weight: 600;
+      color: var(--text);
+      max-width: 28vw;
+      line-height: 1.2;
+    }
+
+    /* question phase header overlay */
+    #questionHeader {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.6vh;
+    }
+    #questionHeader.visible { display: flex; }
+
+    #questionNum {
+      font-size: clamp(10px, 1.4vh, 18px);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    #questionHeaderText {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(14px, 2.2vh, 34px);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    /* countdown ring in header (question phase) */
+    #countdownWrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3vh;
+    }
+    #countdownWrap.visible { display: flex; }
     #countdownRing { transform: rotate(-90deg); }
-    #ringTrack { fill: none; stroke: #eee; stroke-width: 8; }
-    #ringFill  { fill: none; stroke: #3498db; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
-
-    #countdownNumber {
-      font-size: 28px;
-      font-weight: bold;
-      color: #2c3e50;
-      margin-top: 8px;
+    #ringTrack { fill: none; stroke: var(--divider); stroke-width: 6; }
+    #ringFill  { fill: none; stroke: var(--active); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+    #countdownNum {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(12px, 2vh, 28px);
+      font-weight: 800;
+      color: var(--text);
     }
 
-    /* ── Breakdown question text ────────────────────────────────────────── */
-    #breakdownQuestionText {
-      font-size: clamp(24px, 4vw, 48px);
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 30px;
-      max-width: 900px;
+    /* ── Player viz (bottom 2/3) ────────────────────────────────────────── */
+    #playerViz {
+      padding: 1.5vh 2vw;
+      overflow: hidden;
+      position: relative;
     }
+    #playerViz.hidden { display: none; }
 
-    /* ── Breakdown bars ─────────────────────────────────────────────────── */
-    #breakdownSection { flex-direction: column; }
+    /* breakdown bar overlay (sits at top of viz during breakdown) */
+    #breakdownBars {
+      display: none;
+      position: absolute;
+      top: 1.5vh;
+      right: 2vw;
+      flex-direction: column;
+      gap: 0.6vh;
+      z-index: 10;
+      background: rgba(27,35,56,0.85);
+      border-radius: 1vh;
+      padding: 1vh 1.5vw;
+      border: 1px solid var(--divider);
+      min-width: 14vw;
+    }
+    #breakdownBars.visible { display: flex; }
 
-    .bar-row {
+    .brow {
       display: flex;
       align-items: center;
-      margin: 8px 0;
-      width: 100%;
-      max-width: 700px;
+      gap: 0.8vw;
     }
-
-    .bar-label {
-      width: 36px;
-      font-size: 22px;
-      font-weight: bold;
-      color: #2c3e50;
+    .blabel {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(10px, 1.5vh, 20px);
+      font-weight: 800;
+      width: 1.4vw;
       flex-shrink: 0;
     }
-
-    .bar-track {
+    .btrack {
       flex: 1;
-      height: 44px;
-      background: #ecf0f1;
-      border-radius: 6px;
+      height: clamp(6px, 0.9vh, 14px);
+      background: var(--bg-card);
+      border-radius: 9999px;
       overflow: hidden;
-      margin: 0 10px;
+      min-width: 6vw;
     }
-
-    .bar-fill {
+    .bfill {
       height: 100%;
-      background: #3498db;
       width: 0%;
-      transition: width 0.5s ease;
-      border-radius: 6px;
+      border-radius: 9999px;
+      transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1);
     }
-
-    .bar-fill.correct { background: #27ae60; }
-
-    .bar-count {
-      width: 40px;
-      font-size: 20px;
-      font-weight: bold;
-      color: #555;
+    .bcount {
+      font-size: clamp(9px, 1.2vh, 16px);
+      font-weight: 700;
+      color: var(--text-muted);
+      width: 2.5vw;
       text-align: right;
       flex-shrink: 0;
     }
 
-    /* ── Survivor ───────────────────────────────────────────────────────── */
-    #survivorCount {
-      font-size: 36px;
-      font-weight: bold;
-      color: #2c3e50;
-      margin-bottom: 16px;
+    /* ── Grid ───────────────────────────────────────────────────────────── */
+    #playerGrid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(clamp(22px, 3.5vw, 52px), 1fr));
+      gap: clamp(3px, 0.5vw, 8px);
+      align-content: start;
     }
 
-    /* ── Winner ─────────────────────────────────────────────────────────── */
-    #winnerSection { flex-direction: column; text-align: center; }
+    /* square tile (normal mode) */
+    .ptile {
+      aspect-ratio: 1;
+      border-radius: clamp(3px, 0.4vw, 7px);
+      background: var(--active);
+      transition: background 0.5s ease, opacity 0.5s ease, transform 0.5s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .ptile::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+      border-radius: inherit;
+    }
+    .ptile.answer-a { background: var(--answer-a); }
+    .ptile.answer-b { background: var(--answer-b); }
+    .ptile.answer-c { background: var(--answer-c); }
+    .ptile.answer-d { background: var(--answer-d); }
+    .ptile.no-answer { background: #2A3A52; opacity: 0.5; }
+    .ptile.eliminated { background: var(--eliminated); opacity: 0.35; }
 
-    #winnerLabel { font-size: 28px; color: #666; margin-bottom: 20px; }
+    /* name tile (final 10 mode) */
+    #playerGrid.final10 {
+      grid-template-columns: repeat(auto-fill, minmax(clamp(80px, 14vw, 220px), 1fr));
+      gap: clamp(6px, 1vw, 16px);
+      align-content: center;
+    }
+    .ptile.nametile {
+      aspect-ratio: unset;
+      height: clamp(36px, 7vh, 90px);
+      border-radius: clamp(6px, 0.8vw, 12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 1vw;
+    }
+    .ptile.nametile .name-label {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(11px, 1.8vh, 26px);
+      font-weight: 700;
+      color: rgba(255,255,255,0.92);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .ptile.nametile.eliminated .name-label {
+      color: var(--elim-text);
+    }
+    @keyframes dropOff {
+      0%   { transform: translateY(0);    opacity: 1; }
+      100% { transform: translateY(120%); opacity: 0; }
+    }
+    .ptile.dropping {
+      animation: dropOff 0.5s ease-in forwards;
+    }
+
+    /* ── Winner screen ───────────────────────────────────────────────────── */
+    #winnerScreen {
+      display: none;
+      position: absolute;
+      inset: 0;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2vh;
+      background: var(--bg);
+      z-index: 100;
+    }
+    #winnerScreen.visible { display: flex; }
+
+    #winnerLabel {
+      font-size: clamp(12px, 2vh, 28px);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
 
     #winnerNames {
-      font-size: clamp(40px, 8vw, 100px);
-      font-weight: bold;
-      color: #f0a500;
-      animation: winnerPop 0.6s ease-out;
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(36px, 9vw, 120px);
+      font-weight: 800;
+      color: var(--answer-a);
+      text-align: center;
+      line-height: 1;
+      padding: 0 4vw;
+      animation: winPop 0.7s cubic-bezier(0.34,1.56,0.64,1) both;
     }
-
-    @keyframes winnerPop {
-      from { transform: scale(0.4); opacity: 0; }
+    @keyframes winPop {
+      from { transform: scale(0.5); opacity: 0; }
       to   { transform: scale(1);   opacity: 1; }
     }
 
-    /* ── Debug panel ────────────────────────────────────────────────────── */
-    #debugPanel {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      width: 340px;
-      z-index: 1000;
+    #winnerSurvivorNote {
+      font-size: clamp(10px, 1.6vh, 22px);
+      color: var(--text-muted);
     }
 
+    /* ── Debug ───────────────────────────────────────────────────────────── */
+    #debugPanel {
+      position: absolute;
+      bottom: 1vh;
+      right: 1vw;
+      width: 22vw;
+      z-index: 200;
+      display: none;
+    }
     #debugPanel details summary {
       cursor: pointer;
-      font-weight: bold;
-      background: #1e1e1e;
-      color: #ccc;
-      padding: 4px 8px;
+      font-weight: 700;
+      background: #0f1522;
+      color: #8899bb;
+      padding: 3px 8px;
       border-radius: 4px 4px 0 0;
-    }
-
-    #debugPanel pre {
-      background: #1e1e1e;
-      color: #d4d4d4;
-      padding: 8px;
-      margin: 0;
       font-size: 11px;
-      max-height: 260px;
+    }
+    #debugPanel pre {
+      background: #0f1522;
+      color: #99aabb;
+      padding: 6px 8px;
+      margin: 0;
+      font-size: 10px;
+      max-height: 20vh;
       overflow: auto;
       border-radius: 0 0 4px 4px;
     }
   </style>
 </head>
 <body>
+<div id="stage">
 
-  <!-- ─── Lobby ─────────────────────────────────────────────────────────── -->
-  <div id="lobbySection" class="phase-root">
-    <h1 style="margin-bottom:10px;">Teams Trivia</h1>
-    <p id="playerCountLabel">Waiting for players...</p>
-  </div>
+  <!-- ── Header ─────────────────────────────────────────────────── -->
+  <div id="header">
+    <img id="logoMark" src="/product/dept-logo.png" alt="Logo">
 
-  <!-- ─── Word cloud (persistent: shown in lobby + elimination phases) ───── -->
-  <div id="wordCloud"></div>
-
-  <!-- ─── Elimination ──────────────────────────────────────────────────── -->
-  <div id="eliminationSection" class="phase-root"></div>
-
-  <!-- ─── Question ──────────────────────────────────────────────────────── -->
-  <div id="questionSection" class="phase-root">
-    <div id="questionText"></div>
-    <div id="answerLabels">
-      <div class="answer-label"><span class="answer-letter">A</span><span class="answer-text" id="answerTextA"></span></div>
-      <div class="answer-label"><span class="answer-letter">B</span><span class="answer-text" id="answerTextB"></span></div>
-      <div class="answer-label"><span class="answer-letter">C</span><span class="answer-text" id="answerTextC"></span></div>
-      <div class="answer-label"><span class="answer-letter">D</span><span class="answer-text" id="answerTextD"></span></div>
+    <div id="headerCenter">
+      <div id="gameTitle">Teams Trivia</div>
+      <!-- shown during question phase -->
+      <div id="questionHeader">
+        <div id="questionNum">Question 1</div>
+        <div id="questionHeaderText"></div>
+      </div>
+      <!-- shown outside question phase -->
+      <div id="headerSub" id="phaseSub">Waiting for players</div>
     </div>
-    <svg id="countdownRing" width="120" height="120" viewBox="0 0 120 120">
-      <circle id="ringTrack" cx="60" cy="60" r="52"/>
-      <circle id="ringFill"  cx="60" cy="60" r="52"/>
-    </svg>
-    <div id="countdownNumber">10</div>
-  </div>
 
-  <!-- ─── Breakdown ─────────────────────────────────────────────────────── -->
-  <div id="breakdownSection" class="phase-root">
-    <div id="breakdownQuestionText"></div>
-    <h2 style="margin-bottom:20px;">Results</h2>
-    <div class="bar-row">
-      <span class="bar-label">A</span>
-      <div class="bar-track"><div id="barA" class="bar-fill"></div></div>
-      <span id="countA" class="bar-count">0</span>
-    </div>
-    <div class="bar-row">
-      <span class="bar-label">B</span>
-      <div class="bar-track"><div id="barB" class="bar-fill"></div></div>
-      <span id="countB" class="bar-count">0</span>
-    </div>
-    <div class="bar-row">
-      <span class="bar-label">C</span>
-      <div class="bar-track"><div id="barC" class="bar-fill"></div></div>
-      <span id="countC" class="bar-count">0</span>
-    </div>
-    <div class="bar-row">
-      <span class="bar-label">D</span>
-      <div class="bar-track"><div id="barD" class="bar-fill"></div></div>
-      <span id="countD" class="bar-count">0</span>
+    <div id="headerRight">
+      <div id="playerCountBadge">0 players</div>
+
+      <!-- countdown ring (question phase) -->
+      <div id="countdownWrap">
+        <svg id="countdownRing" width="52" height="52" viewBox="0 0 52 52">
+          <circle id="ringTrack" cx="26" cy="26" r="22"/>
+          <circle id="ringFill"  cx="26" cy="26" r="22"/>
+        </svg>
+        <div id="countdownNum">10</div>
+      </div>
+
+      <!-- correct answer (survivor phase) -->
+      <div id="correctReveal">
+        <span id="correctLetter">A</span>
+        <span id="correctText"></span>
+      </div>
     </div>
   </div>
 
-  <!-- ─── Survivor ──────────────────────────────────────────────────────── -->
-  <div id="survivorSection" class="phase-root">
-    <div id="survivorCount"></div>
-    <div id="survivorCloud"></div>
+  <!-- ── Player visualisation ───────────────────────────────────── -->
+  <div id="playerViz">
+    <div id="playerGrid"></div>
+
+    <!-- breakdown bar overlay -->
+    <div id="breakdownBars">
+      <div class="brow">
+        <span class="blabel" style="color:var(--answer-a)">A</span>
+        <div class="btrack"><div id="barA" class="bfill" style="background:var(--answer-a)"></div></div>
+        <span id="cntA" class="bcount">0</span>
+      </div>
+      <div class="brow">
+        <span class="blabel" style="color:var(--answer-b)">B</span>
+        <div class="btrack"><div id="barB" class="bfill" style="background:var(--answer-b)"></div></div>
+        <span id="cntB" class="bcount">0</span>
+      </div>
+      <div class="brow">
+        <span class="blabel" style="color:var(--answer-c)">C</span>
+        <div class="btrack"><div id="barC" class="bfill" style="background:var(--answer-c)"></div></div>
+        <span id="cntC" class="bcount">0</span>
+      </div>
+      <div class="brow">
+        <span class="blabel" style="color:var(--answer-d)">D</span>
+        <div class="btrack"><div id="barD" class="bfill" style="background:var(--answer-d)"></div></div>
+        <span id="cntD" class="bcount">0</span>
+      </div>
+    </div>
   </div>
 
-  <!-- ─── Winner ────────────────────────────────────────────────────────── -->
-  <div id="winnerSection" class="phase-root">
+  <!-- ── Winner overlay ─────────────────────────────────────────── -->
+  <div id="winnerScreen">
     <div id="winnerLabel">Winner</div>
     <div id="winnerNames"></div>
+    <div id="winnerSurvivorNote"></div>
   </div>
 
-  <!-- ─── Debug panel ───────────────────────────────────────────────────── -->
-  <div id="debugPanel" style="display:none;">
+  <!-- ── Debug ──────────────────────────────────────────────────── -->
+  <div id="debugPanel">
     <details>
-      <summary>Debug: Live Session State</summary>
+      <summary>Debug</summary>
       <pre id="debugJson">{}</pre>
     </details>
   </div>
 
-  <script type="module" src="/shared/trivia-broadcast.js"></script>
+</div>
+<script type="module" src="/shared/trivia-broadcast.js"></script>
 </body>
 </html>

@@ -69,6 +69,7 @@ export interface RoundResult {
   eliminated: string[];
   survivors: string[];
   counts: AnswerCounts;
+  playerAnswers: Record<string, AnswerOption>;
 }
 
 export interface TriviaWinner {

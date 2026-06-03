@@ -159,13 +159,14 @@ describe('serializeEvent', () => {
       expect(JSON.parse(serializeEvent(e))).toEqual({ type: 'timer_expired' });
     });
 
-    it('serializes answer_breakdown with counts', () => {
-      const e: ServerEvent = { type: 'answer_breakdown', counts: { A:1,B:2,C:0,D:0 }, totalAnswered: 3, totalPlayers: 5 };
+    it('serializes answer_breakdown with counts and playerAnswers', () => {
+      const e: ServerEvent = { type: 'answer_breakdown', counts: { A:1,B:2,C:0,D:0 }, totalAnswered: 3, totalPlayers: 5, playerAnswers: { p1: 'A', p2: 'B' } };
       const p = JSON.parse(serializeEvent(e));
       expect(p.type).toBe('answer_breakdown');
       expect(p.counts.B).toBe(2);
       expect(p.totalAnswered).toBe(3);
       expect(p.totalPlayers).toBe(5);
+      expect(p.playerAnswers.p1).toBe('A');
     });
 
     it('serializes answer_revealed with correct, eliminated, survivors', () => {
