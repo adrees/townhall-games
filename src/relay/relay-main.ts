@@ -4,6 +4,7 @@ import { WebSocketServer } from 'ws';
 import { handleStaticRequest } from '../server/http-server';
 import { createRelayHandler } from './relay-handler';
 import { handleVersionRequest } from './version-handler';
+import { attachHeartbeat } from '../server/heartbeat';
 
 const PORT = parseInt(process.env.PORT ?? '10000', 10);
 const RELAY_SECRET = process.env.RELAY_SECRET ?? '';
@@ -28,6 +29,7 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocketServer({ server });
 const relay = createRelayHandler(RELAY_SECRET);
+attachHeartbeat(wss);
 
 wss.on('connection', (ws, req) => {
   const url = req.url ?? '/';

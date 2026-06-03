@@ -5,6 +5,7 @@ import { WebSocketServer } from 'ws';
 import { handleStaticRequest } from './http-server';
 import { createAdminWsHandler } from './admin-ws-handler';
 import { createAdminRelayClient } from './admin-relay-client';
+import { attachHeartbeat } from './heartbeat';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const RELAY_URL = process.env.RELAY_URL ?? '';
@@ -46,6 +47,7 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocketServer({ server });
 let adminWs: import('ws').WebSocket | null = null;
+attachHeartbeat(wss);
 
 function broadcastRelayStatus(status: string): void {
   if (adminWs && adminWs.readyState === adminWs.OPEN) {

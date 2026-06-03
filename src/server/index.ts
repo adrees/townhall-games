@@ -3,6 +3,7 @@ import * as path from 'path';
 import { WebSocketServer } from 'ws';
 import { handleStaticRequest } from './http-server';
 import { createWsHandler } from './ws-handler';
+import { attachHeartbeat } from './heartbeat';
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
@@ -13,6 +14,7 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocketServer({ server });
 const wsHandler = createWsHandler();
+attachHeartbeat(wss);
 
 wss.on('connection', (ws) => {
   wsHandler.handleConnection(ws);
