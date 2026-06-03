@@ -62,7 +62,7 @@
 
     /* logo mark */
     #logoMark {
-      height: 5vh;
+      height: 8vh;
       width: auto;
       flex-shrink: 0;
     }
@@ -77,7 +77,7 @@
 
     #gameTitle {
       font-family: 'Syne', sans-serif;
-      font-size: clamp(18px, 2.8vh, 40px);
+      font-size: clamp(24px, 4.5vh, 64px);
       font-weight: 800;
       color: var(--text);
       letter-spacing: -0.02em;
@@ -85,7 +85,7 @@
     }
 
     #headerSub {
-      font-size: clamp(11px, 1.6vh, 22px);
+      font-size: clamp(14px, 2.8vh, 38px);
       font-weight: 600;
       color: var(--text-muted);
       letter-spacing: 0.04em;
@@ -101,7 +101,7 @@
     }
 
     #playerCountBadge {
-      font-size: clamp(11px, 1.5vh, 20px);
+      font-size: clamp(14px, 2.8vh, 38px);
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
@@ -112,22 +112,22 @@
     #correctReveal {
       display: none;
       align-items: center;
-      gap: 1vw;
+      gap: 1.5vw;
       background: var(--bg-card);
       border-radius: 1vh;
-      padding: 0.8vh 1.5vw;
+      padding: 1.2vh 2vw;
       border: 1px solid var(--divider);
     }
     #correctReveal.visible { display: flex; }
 
     #correctLetter {
       font-family: 'Syne', sans-serif;
-      font-size: clamp(16px, 3.5vh, 52px);
+      font-size: clamp(24px, 6vh, 80px);
       font-weight: 800;
       line-height: 1;
     }
     #correctText {
-      font-size: clamp(10px, 1.6vh, 22px);
+      font-size: clamp(14px, 2.8vh, 38px);
       font-weight: 600;
       color: var(--text);
       max-width: 28vw;
@@ -144,7 +144,7 @@
     #questionHeader.visible { display: flex; }
 
     #questionNum {
-      font-size: clamp(10px, 1.4vh, 18px);
+      font-size: clamp(12px, 2.2vh, 28px);
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
@@ -153,7 +153,7 @@
 
     #questionHeaderText {
       font-family: 'Syne', sans-serif;
-      font-size: clamp(14px, 2.2vh, 34px);
+      font-size: clamp(18px, 3.8vh, 54px);
       font-weight: 700;
       color: var(--text);
       line-height: 1.2;
@@ -168,11 +168,11 @@
     }
     #countdownWrap.visible { display: flex; }
     #countdownRing { transform: rotate(-90deg); }
-    #ringTrack { fill: none; stroke: var(--divider); stroke-width: 6; }
-    #ringFill  { fill: none; stroke: var(--active); stroke-width: 6; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+    #ringTrack { fill: none; stroke: var(--divider); stroke-width: 7; }
+    #ringFill  { fill: none; stroke: var(--active); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
     #countdownNum {
       font-family: 'Syne', sans-serif;
-      font-size: clamp(12px, 2vh, 28px);
+      font-size: clamp(16px, 4vh, 52px);
       font-weight: 800;
       color: var(--text);
     }
@@ -209,14 +209,14 @@
     }
     .blabel {
       font-family: 'Syne', sans-serif;
-      font-size: clamp(10px, 1.5vh, 20px);
+      font-size: clamp(14px, 2.2vh, 30px);
       font-weight: 800;
-      width: 1.4vw;
+      width: 2vw;
       flex-shrink: 0;
     }
     .btrack {
       flex: 1;
-      height: clamp(6px, 0.9vh, 14px);
+      height: clamp(10px, 1.6vh, 22px);
       background: var(--bg-card);
       border-radius: 9999px;
       overflow: hidden;
@@ -229,10 +229,10 @@
       transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1);
     }
     .bcount {
-      font-size: clamp(9px, 1.2vh, 16px);
+      font-size: clamp(12px, 1.8vh, 24px);
       font-weight: 700;
       color: var(--text-muted);
-      width: 2.5vw;
+      width: 3vw;
       text-align: right;
       flex-shrink: 0;
     }
@@ -268,7 +268,14 @@
     .ptile.answer-c { background: var(--answer-c); }
     .ptile.answer-d { background: var(--answer-d); }
     .ptile.no-answer { background: #2A3A52; opacity: 0.5; }
-    .ptile.eliminated { background: var(--eliminated); opacity: 0.35; }
+    @keyframes tileVanish {
+      0%   { transform: scale(1);   opacity: 1; }
+      100% { transform: scale(0.3); opacity: 0; }
+    }
+    .ptile.vanishing {
+      animation: tileVanish 0.45s ease-in forwards;
+      pointer-events: none;
+    }
 
     /* name tile (final 10 mode) */
     #playerGrid.final10 {
@@ -287,16 +294,13 @@
     }
     .ptile.nametile .name-label {
       font-family: 'Syne', sans-serif;
-      font-size: clamp(11px, 1.8vh, 26px);
+      font-size: clamp(14px, 3vh, 42px);
       font-weight: 700;
       color: rgba(255,255,255,0.92);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       text-shadow: 0 1px 4px rgba(0,0,0,0.4);
-    }
-    .ptile.nametile.eliminated .name-label {
-      color: var(--elim-text);
     }
     @keyframes dropOff {
       0%   { transform: translateY(0);    opacity: 1; }
@@ -321,7 +325,7 @@
     #winnerScreen.visible { display: flex; }
 
     #winnerLabel {
-      font-size: clamp(12px, 2vh, 28px);
+      font-size: clamp(16px, 3vh, 42px);
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
@@ -401,9 +405,9 @@
 
       <!-- countdown ring (question phase) -->
       <div id="countdownWrap">
-        <svg id="countdownRing" width="52" height="52" viewBox="0 0 52 52">
-          <circle id="ringTrack" cx="26" cy="26" r="22"/>
-          <circle id="ringFill"  cx="26" cy="26" r="22"/>
+        <svg id="countdownRing" width="80" height="80" viewBox="0 0 80 80">
+          <circle id="ringTrack" cx="40" cy="40" r="34"/>
+          <circle id="ringFill"  cx="40" cy="40" r="34"/>
         </svg>
         <div id="countdownNum">10</div>
       </div>

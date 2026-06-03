@@ -33,7 +33,7 @@ const cntEls = { A: document.getElementById('cntA'), B: document.getElementById(
 if (DEBUG_MODE) debugPanel.style.display = 'block';
 
 // ── SVG ring ──────────────────────────────────────────────────────────────────
-const RING_R = 22;
+const RING_R = 34;
 const RING_C = 2 * Math.PI * RING_R;
 ringFill.style.strokeDasharray = RING_C;
 ringFill.style.strokeDashoffset = '0';
@@ -185,42 +185,29 @@ function setBreakdownPhase(counts, totalAnswered, playerAnswers) {
 
 // ── Phase: Survivor sequence ──────────────────────────────────────────────────
 function runSurvivorSequence(eliminated, survivors, correct, options) {
-    // T+3s: grey out eliminated
+    // T+3s: animate eliminated tiles out (same for both normal and final-10 mode)
     setTimeout(() => {
         for (const pid of eliminated) {
             const p = players.get(pid);
             if (!p) continue;
             p.state = 'eliminated';
-            const base = isFinal10 ? 'ptile nametile' : 'ptile';
             if (isFinal10) {
-                // name mode — drop off screen
                 p.el.classList.add('dropping');
-                setTimeout(() => {
-                    p.el.remove();
-                    players.delete(pid);
-                }, 550);
             } else {
-                p.el.className = `${base} eliminated`;
+                p.el.classList.add('vanishing');
             }
         }
+        // T+3.45s: remove from DOM, grid reflows automatically
+        setTimeout(() => {
+            for (const pid of eliminated) {
+                const p = players.get(pid);
+                if (p) { p.el.remove(); players.delete(pid); }
+            }
+        }, 450);
     }, 3000);
 
-    // T+6s: reflow (normal mode) + show correct answer
+    // T+6s: show correct answer
     setTimeout(() => {
-        if (!isFinal10) {
-            // Re-sort DOM: active tiles first, eliminated last
-            const active = [];
-            const elim = [];
-            for (const p of players.values()) {
-                if (p.state === 'active') active.push(p.el);
-                else elim.push(p.el);
-            }
-            playerGrid.innerHTML = '';
-            for (const el of [...active, ...elim]) playerGrid.appendChild(el);
-        }
-
-        // Show correct answer in header
-        const optionTexts = ['a', 'b', 'c', 'd'];
         const idx = ['A', 'B', 'C', 'D'].indexOf(correct);
         const answerText = idx >= 0 ? options[idx] : '';
 
@@ -231,7 +218,6 @@ function runSurvivorSequence(eliminated, survivors, correct, options) {
         breakdownBars.classList.remove('visible');
         setSubText(`${survivors.length} survivor${survivors.length === 1 ? '' : 's'}`);
 
-        // Apply buffered survivors_regrouped data if it arrived
         if (pendingSurvivorsMsg) {
             applyRegrouped(pendingSurvivorsMsg);
             pendingSurvivorsMsg = null;
@@ -250,22 +236,17 @@ function applyRegrouped(msg) {
 }
 
 function switchToFinal10() {
-    // Rebuild grid with name tiles
     playerGrid.classList.add('final10');
     playerGrid.innerHTML = '';
-    const active = [];
-    const elim = [];
     for (const [, p] of players) {
         const label = document.createElement('span');
         label.className = 'name-label';
         label.textContent = p.screenName;
         p.el = document.createElement('div');
-        p.el.className = p.state === 'active' ? 'ptile nametile' : 'ptile nametile eliminated';
+        p.el.className = 'ptile nametile';
         p.el.appendChild(label);
-        if (p.state === 'active') active.push(p.el);
-        else elim.push(p.el);
+        playerGrid.appendChild(p.el);
     }
-    for (const el of [...active, ...elim]) playerGrid.appendChild(el);
 }
 
 // ── Event handlers ────────────────────────────────────────────────────────────
