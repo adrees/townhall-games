@@ -236,7 +236,6 @@ function applyRegrouped(msg) {
 }
 
 function switchToFinal10() {
-    playerGrid.classList.add('final10');
     playerGrid.innerHTML = '';
     for (const [, p] of players) {
         const label = document.createElement('span');
@@ -323,7 +322,6 @@ function resetToLobby() {
     currentQuestionIndex = 0;
     currentQuestionOptions = [];
     pendingSurvivorsMsg = null;
-    playerGrid.classList.remove('final10');
     playerGrid.innerHTML = '';
     updateCountBadge();
     winnerScreen.classList.remove('visible');

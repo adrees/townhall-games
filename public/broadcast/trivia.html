@@ -282,30 +282,24 @@
       pointer-events: none;
     }
 
-    /* name tile (final 10 mode) */
-    #playerGrid.final10 {
-      grid-template-columns: repeat(auto-fill, minmax(clamp(80px, 14vw, 220px), 1fr));
-      gap: clamp(6px, 1vw, 16px);
-      align-content: center;
-    }
+    /* name tile (final 10 mode) — same square grid, names inside boxes */
     .ptile.nametile {
-      aspect-ratio: unset;
-      height: clamp(36px, 7vh, 90px);
-      border-radius: clamp(6px, 0.8vw, 12px);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0 1vw;
+      padding: 4px;
     }
     .ptile.nametile .name-label {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: clamp(14px, 3vh, 42px);
+      font-size: clamp(7px, 1.2vw, 18px);
       font-weight: 700;
       color: rgba(255,255,255,0.92);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      text-align: center;
+      width: 100%;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
     }
     @keyframes dropOff {
       0%   { transform: translateY(0);    opacity: 1; }
