@@ -19,7 +19,6 @@ const ringFill         = document.getElementById('ringFill');
 const correctReveal    = document.getElementById('correctReveal');
 const correctLetter    = document.getElementById('correctLetter');
 const correctText      = document.getElementById('correctText');
-const breakdownBars    = document.getElementById('breakdownBars');
 const winnerScreen     = document.getElementById('winnerScreen');
 const winnerLabel      = document.getElementById('winnerLabel');
 const winnerNames      = document.getElementById('winnerNames');
@@ -27,8 +26,6 @@ const winnerSurvivorNote = document.getElementById('winnerSurvivorNote');
 const debugPanel       = document.getElementById('debugPanel');
 const debugJson        = document.getElementById('debugJson');
 
-const barEls = { A: document.getElementById('barA'), B: document.getElementById('barB'), C: document.getElementById('barC'), D: document.getElementById('barD') };
-const cntEls = { A: document.getElementById('cntA'), B: document.getElementById('cntB'), C: document.getElementById('cntC'), D: document.getElementById('cntD') };
 
 if (DEBUG_MODE) debugPanel.style.display = 'block';
 
@@ -139,7 +136,6 @@ function colourTilesForAnswers(playerAnswers) {
 // ── Phase: Lobby ──────────────────────────────────────────────────────────────
 function setLobbyPhase() {
     playerViz.classList.remove('hidden');
-    breakdownBars.classList.remove('visible');
     countdownWrap.classList.remove('visible');
     correctReveal.classList.remove('visible');
     questionHeader.classList.remove('visible');
@@ -153,7 +149,6 @@ function setLobbyPhase() {
 function setQuestionPhase(index, text, options, timeLimit) {
     currentQuestionOptions = options;
     playerViz.classList.add('hidden');
-    breakdownBars.classList.remove('visible');
     correctReveal.classList.remove('visible');
     showQuestionHeader(index, text);
     countdownWrap.classList.add('visible');
@@ -161,7 +156,7 @@ function setQuestionPhase(index, text, options, timeLimit) {
 }
 
 // ── Phase: Breakdown ─────────────────────────────────────────────────────────
-function setBreakdownPhase(counts, totalAnswered, playerAnswers) {
+function setBreakdownPhase(playerAnswers) {
     stopCountdown();
     playerViz.classList.remove('hidden');
     countdownWrap.classList.remove('visible');
@@ -169,18 +164,7 @@ function setBreakdownPhase(counts, totalAnswered, playerAnswers) {
     questionHeader.classList.remove('visible');
     headerSub.style.display = '';
     setSubText('Answers in');
-
-    // colour tiles
     colourTilesForAnswers(playerAnswers);
-
-    // update bars
-    const total = Math.max(totalAnswered, 1);
-    for (const opt of ['A', 'B', 'C', 'D']) {
-        const n = counts[opt] ?? 0;
-        barEls[opt].style.width = ((n / total) * 100) + '%';
-        cntEls[opt].textContent = n;
-    }
-    breakdownBars.classList.add('visible');
 }
 
 // ── Phase: Survivor sequence ──────────────────────────────────────────────────
@@ -215,7 +199,6 @@ function runSurvivorSequence(eliminated, survivors, correct, options) {
         correctLetter.style.color = `var(--answer-${correct.toLowerCase()})`;
         correctText.textContent = answerText;
         correctReveal.classList.add('visible');
-        breakdownBars.classList.remove('visible');
         setSubText(`${survivors.length} survivor${survivors.length === 1 ? '' : 's'}`);
 
         if (pendingSurvivorsMsg) {
@@ -281,7 +264,7 @@ function onQuestionLive(msg) {
 }
 
 function onAnswerBreakdown(msg) {
-    setBreakdownPhase(msg.counts, msg.totalAnswered, msg.playerAnswers || {});
+    setBreakdownPhase(msg.playerAnswers || {});
 }
 
 function onAnswerRevealed(msg) {
@@ -325,7 +308,6 @@ function resetToLobby() {
     playerGrid.innerHTML = '';
     updateCountBadge();
     winnerScreen.classList.remove('visible');
-    breakdownBars.classList.remove('visible');
     correctReveal.classList.remove('visible');
     countdownWrap.classList.remove('visible');
     questionHeader.classList.remove('visible');

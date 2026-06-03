@@ -189,58 +189,6 @@
     }
     #playerViz.hidden { display: none; }
 
-    /* breakdown bar overlay (sits at top of viz during breakdown) */
-    #breakdownBars {
-      display: none;
-      position: absolute;
-      top: 1.5vh;
-      right: 2vw;
-      flex-direction: column;
-      gap: 0.6vh;
-      z-index: 10;
-      background: rgba(27,35,56,0.85);
-      border-radius: 1vh;
-      padding: 1vh 1.5vw;
-      border: 1px solid var(--divider);
-      min-width: 14vw;
-    }
-    #breakdownBars.visible { display: flex; }
-
-    .brow {
-      display: flex;
-      align-items: center;
-      gap: 0.8vw;
-    }
-    .blabel {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: clamp(14px, 2.2vh, 30px);
-      font-weight: 800;
-      width: 2vw;
-      flex-shrink: 0;
-    }
-    .btrack {
-      flex: 1;
-      height: clamp(10px, 1.6vh, 22px);
-      background: var(--bg-card);
-      border-radius: 9999px;
-      overflow: hidden;
-      min-width: 6vw;
-    }
-    .bfill {
-      height: 100%;
-      width: 0%;
-      border-radius: 9999px;
-      transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .bcount {
-      font-size: clamp(12px, 1.8vh, 24px);
-      font-weight: 700;
-      color: var(--text-muted);
-      width: 3vw;
-      text-align: right;
-      flex-shrink: 0;
-    }
-
     /* ── Grid ───────────────────────────────────────────────────────────── */
     #playerGrid {
       width: 100%;
@@ -421,30 +369,6 @@
   <!-- ── Player visualisation ───────────────────────────────────── -->
   <div id="playerViz">
     <div id="playerGrid"></div>
-
-    <!-- breakdown bar overlay -->
-    <div id="breakdownBars">
-      <div class="brow">
-        <span class="blabel" style="color:var(--answer-a)">A</span>
-        <div class="btrack"><div id="barA" class="bfill" style="background:var(--answer-a)"></div></div>
-        <span id="cntA" class="bcount">0</span>
-      </div>
-      <div class="brow">
-        <span class="blabel" style="color:var(--answer-b)">B</span>
-        <div class="btrack"><div id="barB" class="bfill" style="background:var(--answer-b)"></div></div>
-        <span id="cntB" class="bcount">0</span>
-      </div>
-      <div class="brow">
-        <span class="blabel" style="color:var(--answer-c)">C</span>
-        <div class="btrack"><div id="barC" class="bfill" style="background:var(--answer-c)"></div></div>
-        <span id="cntC" class="bcount">0</span>
-      </div>
-      <div class="brow">
-        <span class="blabel" style="color:var(--answer-d)">D</span>
-        <div class="btrack"><div id="barD" class="bfill" style="background:var(--answer-d)"></div></div>
-        <span id="cntD" class="bcount">0</span>
-      </div>
-    </div>
   </div>
 
   <!-- ── Winner overlay ─────────────────────────────────────────── -->
