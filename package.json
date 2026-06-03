@@ -13,7 +13,7 @@
     "start:relay": "node dist/relay/relay-main.js",
     "smoke": "node scripts/smoke-test.js",
     "smoke:local": "SMOKE_URL=http://localhost:10000 RELAY_SECRET=dev node scripts/smoke-test.js",
-    "dev": "tsc && RELAY_SECRET=dev RELAY_URL=ws://localhost:10000 node dist/relay/relay-main.js & RELAY_SECRET=dev RELAY_URL=ws://localhost:10000 node dist/server/admin-main.js; kill %1"
+    "dev": "tsc && RELAY_SECRET=dev RELAY_URL=ws://127.0.0.1:10000 node dist/relay/relay-main.js & sleep 1 && RELAY_SECRET=dev RELAY_URL=ws://127.0.0.1:10000 node dist/server/admin-main.js; kill %1"
   },
   "keywords": [],
   "author": "",
