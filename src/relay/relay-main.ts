@@ -40,7 +40,7 @@ wss.on('connection', (ws, req) => {
   }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, () => {
   console.log(`Relay server running on port ${PORT}`);
   console.log(`Player page: http://localhost:${PORT}/`);
   console.log(`Admin connects to: ws://localhost:${PORT}/admin`);
